@@ -66,20 +66,21 @@ export async function runFaceCropToAvatar(
     headFraming,
   });
 
-  let bodyParts: Awaited<ReturnType<typeof prepareScaledBodyPartsFromDir>> | undefined;
-  if (bodyMode === "photo") {
+  let photoBody: Awaited<ReturnType<typeof prepareScaledBodyPartsFromDir>> | undefined;
+  if (bodyMode === "photo" || bodyMode === "photo_v3") {
     const sourceDir = input.sourceDir;
     if (!sourceDir) {
-      throw new Error("Photo body mode requires sourceDir (character folder with *2*/*3*/*4* crops).");
+      throw new Error("Photo body mode requires sourceDir (character folder with part crops).");
     }
-    bodyParts = await prepareScaledBodyPartsFromDir(sourceDir, input.vibe);
+    const forceSchema = bodyMode === "photo_v3" ? ("v3" as const) : undefined;
+    photoBody = await prepareScaledBodyPartsFromDir(sourceDir, input.vibe, forceSchema);
   }
 
   const sheet = await buildSpriteSheet(
     portrait,
     input.vibe,
     headFraming,
-    bodyParts?.parts,
+    photoBody?.parts,
   );
 
   const portraitFile = `${input.id}-portrait.png`;
@@ -97,12 +98,27 @@ export async function runFaceCropToAvatar(
       );
     }
     await writeFile(path.join(input.intermediateDir, "2-portrait-64.png"), portrait);
-    if (bodyParts) {
-      await writeFile(path.join(input.intermediateDir, "2-torso-slot.png"), bodyParts.parts.torso);
-      await writeFile(path.join(input.intermediateDir, "3-right-arm-slot.png"), bodyParts.parts.rightArm);
-      await writeFile(path.join(input.intermediateDir, "4-left-arm-slot.png"), bodyParts.parts.leftArm);
-      await writeFile(path.join(input.intermediateDir, "5-right-leg-slot.png"), bodyParts.parts.rightLeg);
-      await writeFile(path.join(input.intermediateDir, "6-left-leg-slot.png"), bodyParts.parts.leftLeg);
+    if (photoBody) {
+      await writeFile(path.join(input.intermediateDir, "2-torso-slot.png"), photoBody.parts.torso);
+      if (photoBody.schema === "v3") {
+        const p = photoBody.parts;
+        await writeFile(path.join(input.intermediateDir, "3-right-upper-arm-slot.png"), p.rightUpperArm);
+        await writeFile(path.join(input.intermediateDir, "4-right-forearm-slot.png"), p.rightForearm);
+        await writeFile(path.join(input.intermediateDir, "5-right-hand-slot.png"), p.rightHand);
+        await writeFile(path.join(input.intermediateDir, "6-left-upper-arm-slot.png"), p.leftUpperArm);
+        await writeFile(path.join(input.intermediateDir, "7-left-forearm-slot.png"), p.leftForearm);
+        await writeFile(path.join(input.intermediateDir, "8-left-hand-slot.png"), p.leftHand);
+        await writeFile(path.join(input.intermediateDir, "9-right-leg-slot.png"), p.rightLeg);
+        await writeFile(path.join(input.intermediateDir, "10-right-foot-slot.png"), p.rightFoot);
+        await writeFile(path.join(input.intermediateDir, "11-left-leg-slot.png"), p.leftLeg);
+        await writeFile(path.join(input.intermediateDir, "12-left-foot-slot.png"), p.leftFoot);
+      } else {
+        const p = photoBody.parts;
+        await writeFile(path.join(input.intermediateDir, "3-right-arm-slot.png"), p.rightArm);
+        await writeFile(path.join(input.intermediateDir, "4-left-arm-slot.png"), p.leftArm);
+        await writeFile(path.join(input.intermediateDir, "5-right-leg-slot.png"), p.rightLeg);
+        await writeFile(path.join(input.intermediateDir, "6-left-leg-slot.png"), p.leftLeg);
+      }
     }
     await writeFile(path.join(input.intermediateDir, "3-sheet.png"), sheet);
   }

@@ -1,7 +1,12 @@
 export { cropFace, scaleFaceCrop, scalePartCrop } from "./cropFace.js";
-export type { BodyMode, ScaledBodyParts } from "./bodyPartSlots.js";
-export { resolvePartCropPaths } from "./resolvePartCrops.js";
-export { prepareScaledBodyPartsFromDir, prepareScaledBodyPartsFromPaths } from "./prepareBodyParts.js";
+export type { BodyMode, ScaledBodyParts, ScaledBodyPartsV3, PhotoBodySchema } from "./bodyPartSlots.js";
+export { detectPhotoBodySchema, resolvePartCropPaths, resolvePartCropPathsV3 } from "./resolvePartCrops.js";
+export {
+  prepareScaledBodyPartsFromDir,
+  prepareScaledBodyPartsFromPaths,
+  prepareScaledBodyPartsV3FromPaths,
+  type PreparedPhotoBody,
+} from "./prepareBodyParts.js";
 export {
   findSubjectRect,
   fitSubjectInSquare,

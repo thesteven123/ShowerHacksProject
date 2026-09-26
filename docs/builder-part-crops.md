@@ -2,6 +2,26 @@
 
 Friends follow [friend-photo-guide.md](./friend-photo-guide.md) (**two photos only**). This doc is for whoever builds roster characters.
 
+## Golden path reference — Steven (Person 1)
+
+Use **Steven** to validate workflow or Electron integration changes before touching other friends:
+
+| Step | Repo path |
+| --- | --- |
+| Part crops | [`packages/character-creator/assets/sources/steven/v2_/`](../packages/character-creator/assets/sources/steven/v2_/) — `steven1.jpg` … `steven6.jpg` |
+| Built assets | [`packages/character-creator/assets/built/steven/`](../packages/character-creator/assets/built/steven/) |
+| Roster | `id: "steven"` in [`characters.json`](../packages/character-creator/data/characters.json) |
+
+Rebuild (preserves quotes):
+
+```bash
+npm run face-crop:avatar -- packages/character-creator/assets/sources/steven/v2_ \
+  --body photo --slug steven --name Steven --roster
+npm run verify:preview && npm run preview
+```
+
+Preview opens on **Steven** by default. Midpoint Electron goal: **this** character animates in the transparent overlay first.
+
 ## Workflow overview
 
 ```text
@@ -15,12 +35,12 @@ Friend: face photo + full-body photo
 
 ## Step 1 — Save incoming photos
 
-Create `packages/character-creator/assets/sources/<slug>/` (e.g. `kelvin`).
+Create `packages/character-creator/assets/sources/<slug>/` (e.g. `steven`).
 
 | File | Source |
 | --- | --- |
-| Face (`*1*` / `*1crop*`) | Photo A from friend — copy/rename e.g. `kelvin1.jpg` |
-| Full body (reference) | Photo B — any name e.g. `kelvin-fullbody.jpg` (used only in lasso tool until exported) |
+| Face (`*1*` / `*1crop*`) | Photo A from friend — copy/rename e.g. `steven1.jpg` |
+| Full body (reference) | Photo B — any name e.g. `steven-fullbody.jpg` (used only in lasso tool until exported) |
 
 ## Step 2 — Lasso part crops (Phase 2)
 
@@ -32,7 +52,7 @@ npm run lasso
 
 Then in the browser (http://localhost:5175):
 
-1. Enter **slug** (e.g. `kelvin`).
+1. Enter **slug** (e.g. `steven`).
 2. Load the **full-body** image.
 3. Optionally load the **face** image (exported as `\<slug\>1crop.png` with the batch).
 4. For each part, select the slot and draw a **lasso** (click points around the region, double-click or **Close lasso** to finish):

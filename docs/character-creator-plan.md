@@ -110,11 +110,12 @@ If the core game works with **placeholder characters** first (doc’s rule), you
 
 - [x] **Roster workflow:** `face-crop:avatar --roster` upserts `characters.json`; dev mocks stay in `mockCharacters.json` (`generate:mocks` does not wipe real friends).
 - [ ] **Push `character-creator` branch** so Person 1/3/5 can depend on packages (`158498a` initial sprites commit is local until pushed).
-- [ ] **Optional polish:** Better default quotes; tighter face crop when you add face detection; keep `fio-face.png` out of git if photos should stay local.
+- [x] **Golden path:** Steven — two-photo + lasso → `assets/sources/steven/v2_/` → `built/steven` → roster (`verify:preview` passes). Documented in [`builder-part-crops.md`](./builder-part-crops.md).
+- [ ] **Optional polish:** Better default quotes (incl. Steven); tighter face crop when you add face detection; keep `fio-face.png` out of git if photos should stay local.
 
 ### Next — with Person 1 (Electron midpoint)
 
-- [ ] **Midpoint:** One mock (or real friend) animates in the transparent overlay — wire `loadRosterCharacters()` / path resolver in `src/electron/main.ts`, expose full roster over IPC, reuse `apps/character-preview/src/spriteRenderer.ts` in renderer.
+- [ ] **Midpoint:** **Steven** animates in the transparent overlay (golden-path roster entry) — wire `loadRosterCharacters()` / path resolver in `src/electron/main.ts`, map `/built/steven/...` URLs, expose full roster over IPC, reuse `apps/character-preview/src/spriteRenderer.ts` in renderer.
 - [ ] **Unify types:** Electron should import `FriendCharacter` from `@tiny-menaces/shared` (or mirror the `sprite` field); today `src/shared/types.ts` is portrait-only.
 - [ ] **Photo upload path:** Main reads file → `createCharacterFromPhoto` → save under `userData` with `file://` URLs (see integration notes).
 

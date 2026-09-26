@@ -33,7 +33,7 @@ npm run face-crop:avatar -- packages/character-creator/assets/sources/<slug>/v2_
 `--roster` upserts into `characters.json` (keeps existing **quotes** on rebuild). Output PNGs: `assets/built/<slug>/`.
 
 ```bash
-npm run preview   # http://localhost:5174 — Kelvin, Maanya, …
+npm run preview   # http://localhost:5174 — defaults to Steven (golden path)
 ```
 
 Optional: check **Show dev mocks** in preview for Alex / Jordan / Sam.
@@ -58,9 +58,11 @@ npm run verify:preview
 Example:
 
 ```bash
-npm run face-crop:avatar -- packages/character-creator/assets/sources/kelvin/v2_ \
-  --body photo --slug kelvin --name Kelvin --roster
+npm run face-crop:avatar -- packages/character-creator/assets/sources/steven/v2_ \
+  --body photo --slug steven --name Steven --roster
 ```
+
+See [builder-part-crops.md](../../docs/builder-part-crops.md) — Steven is the reference run for workflow and Electron midpoint.
 
 **Head framing** (`--framing`): `bbox` (default) or `template` — see below.
 
