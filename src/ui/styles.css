@@ -1004,7 +1004,10 @@ summary span {
 
 .torso.has-photo,
 .arm.has-photo,
-.leg.has-photo {
+.leg.has-photo,
+.forearm.has-photo,
+.hand.has-photo,
+.foot.has-photo {
   background-color: transparent;
 }
 
@@ -1027,6 +1030,10 @@ summary span {
 .arm.left { left: -5px; transform: rotate(14deg); }
 .arm.right { right: -5px; transform: rotate(-14deg); }
 
+/* Legacy whole-arm crops (10×26) — show full length, no separate forearm. */
+.figure.arms-v2 .arm { height: 26px; }
+.figure.arms-v2 .forearm { display: none; }
+
 .elbow {
   position: absolute;
   left: 50%;
@@ -1047,6 +1054,9 @@ summary span {
   margin-left: -3.5px;
   border-radius: 8px;
   background: var(--skin);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
   transform-origin: top center;
 }
 
@@ -1062,6 +1072,9 @@ summary span {
   margin-left: -8px;
   border-radius: 8px;
   background: color-mix(in srgb, var(--skin) 78%, #17131c);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
 }
 
 .legs {
@@ -1096,6 +1109,9 @@ summary span {
   height: 9px;
   border-radius: 8px 12px 6px 6px;
   background: color-mix(in srgb, var(--skin) 78%, #17131c);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
 }
 
 .leg.left .foot { left: -2px; }

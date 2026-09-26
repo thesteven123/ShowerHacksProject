@@ -253,7 +253,7 @@ const SIX_SEVEN: Antic = {
 };
 
 export function pickAntic(character: FriendCharacter, event: GameEventType): Antic {
-  if ((character.id === "ravi" || character.id === "maanya" || character.id === "demo-alex") && event === "idle") {
+  if ((character.id === "ravi" || character.id === "maanya" || character.id === "maanya-v3" || character.id === "demo-alex") && event === "idle") {
     return SIX_SEVEN;
   }
 

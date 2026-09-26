@@ -9,9 +9,10 @@ const builtDestination = path.resolve(destination, "built");
 fs.cpSync(source, destination, { recursive: true });
 
 if (fs.existsSync(builtSource)) {
-  for (const id of ["kelvin", "maanya", "philip", "steven"]) {
+  for (const id of fs.readdirSync(builtSource)) {
+    if (id.includes("bbox") || id.includes("template")) continue;
     const from = path.join(builtSource, id);
-    if (fs.existsSync(from)) {
+    if (fs.statSync(from).isDirectory()) {
       fs.cpSync(from, path.join(builtDestination, id), { recursive: true });
     }
   }
