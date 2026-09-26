@@ -40,7 +40,7 @@ function createWindow(): void {
   window.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
   window.setIgnoreMouseEvents(!gameMode, { forward: true });
   window.loadFile(path.join(__dirname, "../ui/index.html"));
-  window.once("ready-to-show", () => window.showInactive());
+  window.once("ready-to-show", () => window.show());
   window.on("closed", () => {
     if (mainWindow === window) mainWindow = null;
   });
