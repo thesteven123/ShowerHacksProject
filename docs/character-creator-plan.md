@@ -87,26 +87,47 @@ If the core game works with **placeholder characters** first (doc’s rule), you
 
 ## Suggested deliverable checklist (hackathon)
 
-1. Shared **`FriendCharacter`** (+ sprite fields) documented in repo README or `packages/shared/types.ts` (Person 1 creates file; you PR your extensions).
-2. **`mockCharacters.json`** — three fake friends with placeholder images Person 3 uses immediately.
-3. **`createCharacterFromPhoto()`** (or equivalent) — face crop + styled output; can start with a simple center crop if ML face detect slips.
-4. **Animated sprite** — at minimum idle + hit (+ respawn if different); wander can reuse idle frames early.
-5. One-line **handoff doc** for Person 3: image dimensions, anchor point, animation FPS, which URL/path Electron should load.
+1. Shared **`FriendCharacter`** (+ sprite fields) in [`packages/shared/src/types.ts`](../packages/shared/src/types.ts) — **done** (Person 1’s `src/shared/types.ts` still lacks `sprite`; unify at merge).
+2. **`mockCharacters.json`** + PNG sheets under `packages/character-creator/assets/mocks/` — **done** (`npm run generate:mocks`).
+3. **`createCharacterFromPhoto()`** — **done** (center crop, oval styled face, vibe tint; no ML face detect yet).
+4. **Animated sprite** — **done** (14 frames: idle, walk, hit, respawn on 72×108 sheet).
+5. **Handoff docs** — **done**: [`sprite-handoff-person3.md`](./sprite-handoff-person3.md), [`electron-integration-notes.md`](./electron-integration-notes.md).
 
 ---
 
 ## Todos
 
-- [ ] Sync with Person 3 on FriendCharacter extensions (sprite sheet, frames, hitbox/anchor) before building animations
-- [ ] Publish three mock FriendCharacter entries + placeholder sprites for parallel dev (first 30 min)
-- [ ] Implement photo → crop → style → animated asset + FriendCharacter export as importable module (no Electron)
-- [ ] Midpoint: verify one real or mock character loads and animates inside Person 1’s overlay; fix asset paths only
+### Done (Person 2)
+
+- [x] Publish three mock `FriendCharacter` entries + sprite sheets (`Alex`, `Jordan`, `Sam`).
+- [x] Package `@tiny-menaces/character-creator` — `createCharacterFromPhoto`, `loadMockCharacters`, crop/style/sheet helpers (no Electron dep).
+- [x] Preview app — `npm run preview` → http://localhost:5174 (same asset URLs as handoff doc).
+- [x] Photo pipeline smoke-tested (e.g. Phil via `npm run create:character`).
+- [x] Gremlin art pass — visible body/arms, oval face cutout (not square photo frame).
+
+### Next — you (Person 2)
+
+- [ ] **Person 3 sign-off (15 min):** Send them preview link or `sprite-handoff-person3.md`; confirm hitbox/anchor/clip indices work for their renderer (or adjust `DEFAULT_SPRITE_LAYOUT` once).
+- [ ] **Document roster workflow:** Either add `--add-to-roster` on `create:character` or a short note that custom chars must be appended to `assets/mockCharacters.json` (regenerating mocks wipes manual entries).
+- [ ] **Commit & push `character-creator` branch** so Person 1/3/5 can depend on packages (much of `packages/` / `apps/` may still be untracked locally).
+- [ ] **Optional polish:** Better default quotes; tighter face crop when you add face detection; keep `fio-face.png` out of git if photos should stay local.
+
+### Next — with Person 1 (Electron midpoint)
+
+- [ ] **Midpoint:** One mock (or Phil) animates in the transparent overlay — wire `loadMockCharacters()` / path resolver in `src/electron/main.ts`, expose full roster over IPC, reuse `apps/character-preview/src/spriteRenderer.ts` in renderer.
+- [ ] **Unify types:** Electron should import `FriendCharacter` from `@tiny-menaces/shared` (or mirror the `sprite` field); today `src/shared/types.ts` is portrait-only.
+- [ ] **Photo upload path:** Main reads file → `createCharacterFromPhoto` → save under `userData` with `file://` URLs (see integration notes).
+
+### Blocked on others (track, don’t build alone)
+
+- [ ] **Person 5:** Setup/roster UI calls your API; you don’t need to own the screen layout.
+- [ ] **Person 1:** File picker, packaging, `file://` / bundled asset paths.
 
 ---
 
 ## Current repo note
 
-`README.md` is still brainstorming-only. Person 1’s “first 30 minutes” task is repo + app shell + five work areas. Until that lands, you can prototype character logic in this repo or a folder and paste in when the monorepo exists — **still without Electron**.
+`main` has the Electron shell (`npm start`). Character work lives on branch **`character-creator`** with `packages/*`, `apps/character-preview`, and root scripts (`preview`, `create:character`, `generate:mocks`). Merge/rebase with `main` as Steven’s shell evolves; Electron does **not** load your package yet — that’s the midpoint merge above.
 
 ---
 

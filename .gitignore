@@ -2,3 +2,8 @@ node_modules/
 dist/
 .DS_Store
 *.log
+.vite/
+
+# Local photo pipeline outputs (use create:character; do not commit personal photos)
+packages/character-creator/assets/created/
+packages/character-creator/assets/smoke/fio-face.png

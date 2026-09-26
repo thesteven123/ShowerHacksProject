@@ -1,0 +1,184 @@
+[
+  {
+    "id": "mock-alex",
+    "name": "Alex",
+    "imageUrl": "/mocks/mock-alex-portrait.png",
+    "vibe": "chaotic",
+    "quotes": {
+      "idle": [
+        "Don't look at me.",
+        "I'm innocent."
+      ],
+      "hit": [
+        "RUDE!",
+        "That was my good side!"
+      ],
+      "respawn": [
+        "You can't keep me down!"
+      ]
+    },
+    "sprite": {
+      "spriteSheetUrl": "/mocks/mock-alex-sheet.png",
+      "frameWidth": 72,
+      "frameHeight": 108,
+      "frameCount": 14,
+      "anchor": {
+        "x": 36,
+        "y": 107
+      },
+      "hitbox": {
+        "x": 4,
+        "y": 4,
+        "width": 64,
+        "height": 99
+      },
+      "animations": {
+        "idle": {
+          "startFrame": 0,
+          "endFrame": 3,
+          "fps": 6,
+          "loop": true
+        },
+        "walk": {
+          "startFrame": 4,
+          "endFrame": 7,
+          "fps": 8,
+          "loop": true
+        },
+        "hit": {
+          "startFrame": 8,
+          "endFrame": 10,
+          "fps": 12,
+          "loop": false
+        },
+        "respawn": {
+          "startFrame": 11,
+          "endFrame": 13,
+          "fps": 10,
+          "loop": false
+        }
+      }
+    }
+  },
+  {
+    "id": "mock-jordan",
+    "name": "Jordan",
+    "imageUrl": "/mocks/mock-jordan-portrait.png",
+    "vibe": "dramatic",
+    "quotes": {
+      "idle": [
+        "Observe my grandeur."
+      ],
+      "hit": [
+        "Betrayal!",
+        "The audacity!"
+      ],
+      "respawn": [
+        "Curtain call!"
+      ]
+    },
+    "sprite": {
+      "spriteSheetUrl": "/mocks/mock-jordan-sheet.png",
+      "frameWidth": 72,
+      "frameHeight": 108,
+      "frameCount": 14,
+      "anchor": {
+        "x": 36,
+        "y": 107
+      },
+      "hitbox": {
+        "x": 4,
+        "y": 4,
+        "width": 64,
+        "height": 99
+      },
+      "animations": {
+        "idle": {
+          "startFrame": 0,
+          "endFrame": 3,
+          "fps": 6,
+          "loop": true
+        },
+        "walk": {
+          "startFrame": 4,
+          "endFrame": 7,
+          "fps": 8,
+          "loop": true
+        },
+        "hit": {
+          "startFrame": 8,
+          "endFrame": 10,
+          "fps": 12,
+          "loop": false
+        },
+        "respawn": {
+          "startFrame": 11,
+          "endFrame": 13,
+          "fps": 10,
+          "loop": false
+        }
+      }
+    }
+  },
+  {
+    "id": "mock-sam",
+    "name": "Sam",
+    "imageUrl": "/mocks/mock-sam-portrait.png",
+    "vibe": "supportive",
+    "quotes": {
+      "idle": [
+        "You got this!",
+        "Team gremlin!"
+      ],
+      "hit": [
+        "Okay okay!",
+        "Fair shot."
+      ],
+      "respawn": [
+        "Back to cheer you on!"
+      ]
+    },
+    "sprite": {
+      "spriteSheetUrl": "/mocks/mock-sam-sheet.png",
+      "frameWidth": 72,
+      "frameHeight": 108,
+      "frameCount": 14,
+      "anchor": {
+        "x": 36,
+        "y": 107
+      },
+      "hitbox": {
+        "x": 4,
+        "y": 4,
+        "width": 64,
+        "height": 99
+      },
+      "animations": {
+        "idle": {
+          "startFrame": 0,
+          "endFrame": 3,
+          "fps": 6,
+          "loop": true
+        },
+        "walk": {
+          "startFrame": 4,
+          "endFrame": 7,
+          "fps": 8,
+          "loop": true
+        },
+        "hit": {
+          "startFrame": 8,
+          "endFrame": 10,
+          "fps": 12,
+          "loop": false
+        },
+        "respawn": {
+          "startFrame": 11,
+          "endFrame": 13,
+          "fps": 10,
+          "loop": false
+        }
+      }
+    }
+  }
+]
