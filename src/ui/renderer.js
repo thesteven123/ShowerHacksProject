@@ -86,6 +86,13 @@ async function loadFriends() {
 }
 
 async function start() {
+  if (!friendContainer) {
+    console.error("Tiny Menaces: missing #friends container.");
+    return;
+  }
+
+  updateMode(false);
+
   if (window.tinyMenaces?.onModeChange) {
     window.tinyMenaces.onModeChange(updateMode);
   }
