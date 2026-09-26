@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "ES2022",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2022", "DOM"],
+    "outDir": "dist/game-browser",
+    "declaration": true,
+    "types": []
+  },
+  "include": ["src/game/**/*.ts", "src/simulation/**/*.ts", "src/shared/**/*.ts"],
+  "exclude": ["src/shared/roster.ts"]
+}

@@ -2,16 +2,169 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Tiny Menaces</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Tiny Menaces · Your friend, slightly unhinged</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
-    <main id="stage" aria-label="Tiny Menaces desktop overlay">
-      <div id="mode-status" role="status" aria-live="polite"></div>
-      <section id="friends" aria-label="Demo characters"></section>
+    <main id="app">
+      <header class="topbar">
+        <div class="brand">
+          <span class="brand-icon">tm.</span>
+          <div>
+            <strong>TINY MENACES</strong><small>Your group chat escaped.</small>
+          </div>
+        </div>
+        <div class="top-actions">
+          <span id="mode-status" class="pill">Loading friend…</span
+          ><button id="mode-toggle" hidden>Go quiet</button>
+        </div>
+      </header>
+      <aside class="panel">
+        <div class="eyebrow">YOUR DESKTOP PLUS ONE</div>
+        <div class="friend-heading">
+          <span id="friend-avatar">A</span>
+          <div>
+            <h1 id="friend-name">Your friend</h1>
+            <p id="mood">Just happy to be here.</p>
+          </div>
+        </div>
+        <div class="level-row">
+          <strong id="level">Level 1</strong
+          ><span id="xp-label">0 / 50 XP</span>
+        </div>
+        <progress
+          id="xp"
+          max="50"
+          value="0"
+          aria-label="Experience toward next level"
+        ></progress>
+        <div class="stat">
+          <div>
+            <span>Friendship</span><strong id="friendship-value">35</strong>
+          </div>
+          <progress
+            id="friendship"
+            max="100"
+            value="35"
+            aria-label="Friendship"
+          ></progress>
+        </div>
+        <div class="stat anger">
+          <div><span>Anger</span><strong id="anger-value">5</strong></div>
+          <progress
+            id="anger"
+            max="100"
+            value="5"
+            aria-label="Anger"
+          ></progress>
+        </div>
+        <p class="hint" id="friendship-hint">
+          A little kindness goes a long way. Cursor following unlocks at 50.
+        </p>
+        <div class="actions">
+          <button id="pet">♡ Pet friend</button
+          ><button id="bark" disabled>Bark · Lv 2</button
+          ><button id="say67" disabled>67 · Lv 3</button>
+        </div>
+        <div class="world-actions">
+          <span id="world-count">3 friends, living here</span>
+          <button id="drop-ball" type="button">Drop a ball</button>
+          <button id="undo-prop" type="button">Undo ball</button>
+          <button id="clean-props" type="button">Clear balls</button>
+        </div>
+        <div class="divider"></div>
+        <div class="eyebrow">FIRST CHALLENGE / 01</div>
+        <h2>Catch these hands.</h2>
+        <p class="hint">
+          30 seconds. One mouthy friend. Make every click count.
+        </p>
+        <label class="select-label" for="difficulty">Difficulty</label
+        ><select id="difficulty">
+          <option value="easy">Easy · go easy on me</option>
+          <option value="normal" selected>Normal · okay, bet</option>
+          <option value="hard">Hard · catch me if you can</option>
+        </select>
+        <button id="start" class="primary full">
+          Start aim challenge <span>↗</span>
+        </button>
+        <p id="mode-help" class="hint shortcut">
+          ⌘ / Ctrl + Shift + M to interact
+        </p>
+        <div class="divider"></div>
+        <details id="personality-editor">
+          <summary>Born this way <span>4 personality traits</span></summary>
+          <div class="section-title">
+            <p class="hint">Make this friend your own.</p>
+            <button id="randomize" class="text-button">Shuffle ↻</button>
+          </div>
+          <div id="personality-controls"></div>
+          <button id="save-personality" class="secondary full">
+            Save personality
+          </button>
+        </details>
+      </aside>
+      <section class="play-column">
+        <div class="arena-heading">
+          <div>
+            <div class="eyebrow" id="arena-eyebrow">COMPANION MODE</div>
+            <h2 id="arena-title">A little company. A little chaos.</h2>
+          </div>
+          <span class="live-dot">ONE FRIEND ONLINE</span>
+        </div>
+        <div id="hud" hidden>
+          <div><span>TIME</span><strong id="time">30.0</strong></div>
+          <div><span>SCORE</span><strong id="score">0</strong></div>
+          <div><span>STREAK</span><strong id="streak">0</strong></div>
+          <div><span>ACCURACY</span><strong id="accuracy">—</strong></div>
+          <button id="stop">End round</button>
+        </div>
+        <div id="arena" aria-label="Companion and aim challenge area">
+          <div class="arena-guide">
+            <span>YOUR FRIEND LIVES HERE</span><span>⌖</span>
+          </div>
+          <div id="target" role="img" aria-label="Friend character">
+            <div class="placeholder-art">
+              <div class="pet-head">
+                <span id="pet-initials">A</span><span class="eyes">• •</span>
+              </div>
+              <div class="pet-body"></div>
+              <div class="pet-legs"></div>
+            </div>
+            <div class="sprite-art" hidden></div>
+          </div>
+          <div id="speech" role="status" hidden></div>
+          <div id="hit-effect" hidden>HIT!</div>
+          <div id="taunt-badge" hidden>TAUNT BONUS +5</div>
+          <section
+            id="results"
+            hidden
+            aria-label="Round results"
+            aria-live="polite"
+          >
+            <div class="eyebrow">ROUND COMPLETE</div>
+            <h2>You two have history.</h2>
+            <div class="result-score">
+              <strong id="result-score">0</strong><span>POINTS</span>
+            </div>
+            <div id="result-grid"></div>
+            <p id="result-comment"></p>
+            <p class="hint" id="result-context"></p>
+            <div class="result-actions">
+              <button id="again" class="primary">One more round ↗</button
+              ><button id="back">Back to hanging out</button>
+            </div>
+          </section>
+        </div>
+        <footer>
+          <span id="play-tip"
+            >Pet your friend. Let them wander. See what happens.</span
+          ><span>SMALL FRIEND. BIG PERSONALITY.</span>
+        </footer>
+      </section>
+      <div id="notice" role="status" hidden></div>
     </main>
     <script src="./sounds.js"></script>
-    <script src="./renderer.js"></script>
+    <script type="module" src="./renderer.js"></script>
   </body>
 </html>

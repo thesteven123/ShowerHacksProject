@@ -1,8 +1,6 @@
 # Tiny Menaces
 
-Your group chat escaped onto your desktop. Tiny Menaces is a transparent, always-on-top Electron overlay: three full-body gremlins wander the screen, react to game events, and (if they're chaotic) do the 6-7 dance.
-
-Gameplay, photo uploads, and live Moss search are still other workstreams. The Electron shell, shared types, mock roster, CSS sprites, and reaction engine are in place.
+Your group chat escaped onto your desktop. Tiny Menaces is a transparent, always-on-top Electron overlay: real photo-limb friends wander, talk, and play a 30-second Aim Challenge.
 
 ## Run it
 
@@ -13,64 +11,49 @@ npm install
 npm start
 ```
 
-- `Ctrl+Shift+M` / `⌘+Shift+M`: toggle game mode. Normal mode ignores mouse input so the desktop stays usable; game mode accepts clicks.
+- `Ctrl+Shift+M` / `⌘+Shift+M`: toggle interactive mode. Quiet mode keeps the desktop usable; you can still drag a pet.
 - `Ctrl+Shift+Q` / `⌘+Shift+Q`: quit.
 
-There is no normal app window. After `npm start`, look on the **monitor where the mouse is** for:
+There is no normal app window. After `npm start`, look on the **monitor where the mouse is**. Clicks pass through except on pets until interactive mode is on. Check the taskbar/dock for `tiny-menaces`.
 
-- a dark pill in the top-left that says `TINY MENACES`
-- three small full-body figures (orange / purple / green), about 88×148 px
+`npm start` compiles the main process and game modules, copies `src/ui/` plus Person 2's built photos into `dist/`, then launches Electron.
 
-Clicks pass through until game mode is on, so it can feel like nothing launched. Check the taskbar/dock for `tiny-menaces`. If either shortcut is already claimed, Electron logs a warning; change the constants at the top of `src/electron/main.ts`.
+## Roster and sprites
 
-`npm start` compiles the TypeScript main process, copies `src/ui/` into `dist/ui/`, then launches Electron. `dist/` and `node_modules/` are generated and ignored by Git.
+Friends come from Person 2's `packages/character-creator/data/characters.json` (Kelvin, Maanya, Philip, Steven). Each has:
 
-If a teammate still sees nothing: `git pull` on `main`, Node 22.12+, then `npm install` and `npm start` (not `electron .` alone). Quit with `Ctrl+Shift+Q` before starting again.
+- `imageUrl` — face portrait
+- `sprite` — 14-frame 72×108 sheet for Person 3
+- `limbs` — photo crops for head / torso / arms / legs on the overlay figures
 
-## Overlay characters
-
-The renderer draws unnamed CSS stick figures (no nameplates, no photo backgrounds). Each `.figure` is:
-
-- `head` with `eye` (`left` / `right`) and `mouth`
-- `torso` with `arm` (`left` / `right`) → `elbow` → `forearm` → `hand`
-- `legs` with `leg` (`left` / `right`) → `foot`
-
-Alex (chaotic, orange) does the 6-7 dance: shoulders stay put, elbows angle out, palms stay horizontal, and a bubble chants "six" / "seven". Blair (dramatic, purple) and Casey (supportive, green) idle-walk.
-
-## Shared contract
-
-`src/shared/types.ts` is the source of truth:
-
-- `FriendCharacter`: `id`, `name`, `imageUrl`, `vibe` (`chaotic` | `dramatic` | `supportive`), and `quotes.idle/hit/respawn`
-- `GameEvent`: `idle`, `hit`, or `respawn` with a `characterId`, or `roundEnded` with a `score`
-- `Reaction`: `line`, `antic`, `effect`, `sound`, and `source`
-
-`src/shared/mockFriends.ts` is the demo roster the overlay loads over IPC (`friends:list`). Swap it for the character creator's output when that workstream is ready.
+Maanya does the 6-7 dance. Reactions fill in stub quotes.
 
 ## Reactions
 
 Person 3 emits `hit` / `idle` / `respawn` / `roundEnded`. Person 4's engine in `src/reactions/` returns the line, antic, effect, and sound:
 
 ```ts
-import { createReactionEngine, getReaction } from "./src/reactions";
+import { getReaction } from "./src/reactions";
 
 const reaction = getReaction(character, "hit");
-// reaction.line, reaction.antic, reaction.effect, reaction.sound
 ```
 
-Quote search is local and works without Moss keys. Optional Moss hooks live in `src/reactions/mossSearch.ts` for later.
+The overlay also calls this over IPC (`reactions:get`). Quote search is local and works without Moss keys.
 
 ## Workstream seams
 
-- **Electron shell:** `src/electron/` owns the transparent window, shortcuts, and preload bridge.
-- **Character creator:** add photo upload/crop under `src/characters/`; return `FriendCharacter[]`. The overlay currently uses CSS bodies, not `imageUrl`.
-- **Game mechanics:** add aiming, hits, scoring, and respawn under `src/game/`; emit `GameEvent`s from the shared types.
-- **Reactions:** `src/reactions/` is implemented (`getReaction`, `createReactionEngine`, antics, sounds, local quote search).
-- **Interface:** `src/ui/` renders the overlay sprites and mode label. Setup, HUD, and end-screen surfaces still need to be added here.
+- **Electron shell:** `src/electron/` — window, shortcuts, click-through, roster/reaction IPC.
+- **Character creator:** `packages/character-creator/` — photo limbs and sprite sheets.
+- **Game mechanics:** `src/game/` — companion state and Aim Challenge.
+- **Living world:** `src/simulation/` — multi-friend desktop wander.
+- **Reactions:** `src/reactions/` — `getReaction`, antics, sounds, local quote search.
+- **Interface:** `src/ui/` — overlay HUD, pets, and world layer.
 
 ## Checks
 
 ```sh
 npm run typecheck
-npm run build
+npm test
 ```
+
+`npm run preview` is a browser test page for Person 3's UI. `dist/` and `node_modules/` are generated and ignored by Git.

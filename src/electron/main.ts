@@ -6,29 +6,50 @@ import { loadRoster } from "../shared/roster";
 import type { GameEventType } from "../shared/types";
 
 const friends = loadRoster();
-
 const REACTION_EVENTS = new Set<GameEventType>(["idle", "hit", "respawn"]);
-
 const MODE_HOTKEY = "CommandOrControl+Shift+M";
 const QUIT_HOTKEY = "CommandOrControl+Shift+Q";
 
 let mainWindow: BrowserWindow | null = null;
 let gameMode = false;
+let petDragging = false;
+let petRegions: Array<{ x: number; y: number; width: number; height: number }> = [];
+let pointerTimer: NodeJS.Timeout | null = null;
+let ignoringMouse: boolean | null = null;
 
 if (process.platform === "win32") {
   app.commandLine.appendSwitch("enable-transparent-visuals");
 }
 
+function updateMousePassthrough(): void {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  const origin = mainWindow.getBounds();
+  const cursor = screen.getCursorScreenPoint();
+  const x = cursor.x - origin.x;
+  const y = cursor.y - origin.y;
+  const overPet = petRegions.some(
+    (region) =>
+      x >= region.x &&
+      x <= region.x + region.width &&
+      y >= region.y &&
+      y <= region.y + region.height,
+  );
+  const shouldIgnore = !(gameMode || petDragging || overPet);
+  if (shouldIgnore !== ignoringMouse) {
+    mainWindow.setIgnoreMouseEvents(shouldIgnore, { forward: true });
+    ignoringMouse = shouldIgnore;
+  }
+}
+
 function setGameMode(enabled: boolean): void {
   gameMode = enabled;
   if (!mainWindow) return;
-  mainWindow.setIgnoreMouseEvents(!enabled, { forward: true });
+  updateMousePassthrough();
   mainWindow.webContents.send("mode:changed", enabled);
 }
 
 function targetWorkArea(): Electron.Rectangle {
-  const point = screen.getCursorScreenPoint();
-  return screen.getDisplayNearestPoint(point).workArea;
+  return screen.getDisplayNearestPoint(screen.getCursorScreenPoint()).workArea;
 }
 
 function createWindow(): void {
@@ -59,22 +80,40 @@ function createWindow(): void {
   });
 
   mainWindow = window;
+  petRegions = [];
+  petDragging = false;
+  ignoringMouse = null;
   window.setAlwaysOnTop(true, "screen-saver");
   window.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+  updateMousePassthrough();
+  pointerTimer = setInterval(updateMousePassthrough, 33);
   window.loadFile(uiPath);
+  window.webContents.on("did-start-loading", () => {
+    petRegions = [];
+    petDragging = false;
+    updateMousePassthrough();
+  });
 
   const reveal = (): void => {
     if (window.isDestroyed()) return;
     window.show();
     window.moveTop();
-    window.setIgnoreMouseEvents(!gameMode, { forward: true });
+    ignoringMouse = null;
+    updateMousePassthrough();
   };
   window.once("ready-to-show", reveal);
   window.webContents.once("did-finish-load", reveal);
   setTimeout(reveal, 800);
 
   window.on("closed", () => {
-    if (mainWindow === window) mainWindow = null;
+    if (mainWindow === window) {
+      mainWindow = null;
+      if (pointerTimer) clearInterval(pointerTimer);
+      pointerTimer = null;
+      petRegions = [];
+      petDragging = false;
+      ignoringMouse = null;
+    }
   });
 }
 
@@ -85,15 +124,36 @@ app.whenReady().then(() => {
     if (!REACTION_EVENTS.has(event as GameEventType)) return null;
     return getReactionById(friends, characterId, event as GameEventType);
   });
+  ipcMain.on("pets:regions", (event, input: unknown) => {
+    if (event.sender !== mainWindow?.webContents || !Array.isArray(input) || input.length > 20) return;
+    const regions = input as Array<{ x: number; y: number; width: number; height: number }>;
+    if (
+      !regions.every(
+        (region) =>
+          region &&
+          [region.x, region.y, region.width, region.height].every(Number.isFinite) &&
+          region.width > 0 &&
+          region.width <= 200 &&
+          region.height > 0 &&
+          region.height <= 240,
+      )
+    ) {
+      return;
+    }
+    petRegions = regions;
+    updateMousePassthrough();
+  });
+  ipcMain.on("pets:dragging", (event, dragging: unknown) => {
+    if (event.sender !== mainWindow?.webContents || typeof dragging !== "boolean") return;
+    petDragging = dragging;
+    updateMousePassthrough();
+  });
 
   const openOverlay = (): void => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   };
-  if (process.platform === "win32") {
-    setTimeout(openOverlay, 300);
-  } else {
-    openOverlay();
-  }
+  if (process.platform === "win32") setTimeout(openOverlay, 300);
+  else openOverlay();
 
   if (!globalShortcut.register(MODE_HOTKEY, () => setGameMode(!gameMode))) {
     console.warn(`Could not register game-mode hotkey: ${MODE_HOTKEY}`);
