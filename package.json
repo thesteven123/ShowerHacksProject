@@ -1,0 +1,21 @@
+{
+  "name": "tiny-menaces",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A transparent desktop overlay game for Tiny Menaces.",
+  "main": "dist/electron/main.js",
+  "scripts": {
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
+    "build": "npm run clean && tsc -p tsconfig.json && node scripts/copy-ui.cjs",
+    "start": "npm run build && electron .",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.3",
+    "electron": "^44.4.5",
+    "typescript": "^7.0.2"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  }
+}
