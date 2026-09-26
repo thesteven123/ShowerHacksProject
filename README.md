@@ -1,2 +1,2 @@
 # ShowerHacksProject
-we gonna shower
+Brainstorming for our hackathon project
