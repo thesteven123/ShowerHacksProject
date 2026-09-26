@@ -272,7 +272,7 @@ function render() {
   }
   if (livingWorld && !playing && !state.result) {
     const worldState = livingWorld.render();
-    $("world-count").textContent = `${worldState.actors.length} friends · ${worldState.props.length} virtual things`;
+    $("world-count").textContent = `${worldState.actors.length} friends · ${worldState.props.filter(prop => prop.type === "ball").length} balls`;
     $("drop-ball").disabled = !state.interactive || worldState.props.length >= 12;
     $("undo-prop").disabled = !state.interactive || worldState.props.length === 0;
     $("clean-props").disabled = !state.interactive || worldState.props.length === 0;

@@ -10,8 +10,8 @@ iteration, but `npm start` is the desktop deliverable.
 - Each friend has four creation-time personality scores (Chaos, Brainrot,
   Competitive, Friendliness, each 0–10), local needs/mood (0–100), an activity,
   and a feet-center position in the arena.
-- A fixed 100 ms local simulation chooses walk, read, rest, play (when a virtual
-  ball exists), or prank. Needs and personality influence choices. Only the
+- A fixed 100 ms local simulation chooses walk, read, rest, or play (when a
+  virtual ball exists). Needs and personality influence choices. Only the
   simulation changes positions, relationships, and virtual props.
 - Close friends can meet and exchange a short offline dialogue. Relationships
   are directional, and proximity hysteresis plus a cooldown prevent repeated
@@ -20,9 +20,10 @@ iteration, but `npm start` is the desktop deliverable.
   the current activity immediately; releasing a friend produces a reply. The
   offline lines rotate rather than repeating the same greeting.
 - Props exist only inside the app overlay. The UI can drop a ball, undo the
-  latest virtual prop, or clear all props. Automatic prank notes disappear
-  after 20 seconds and are not saved. There is a 12-prop cap; no desktop file
-  is created, moved, or deleted.
+  latest ball, or clear all balls. No automatic decorations or prank actions
+  are generated. Older saved decorations are discarded when loading. There is
+  a 12-ball cap; no desktop file is created, moved,
+  or deleted.
 - The world pauses during Aim Challenge and resumes afterward. Saves are
   validated and stored locally with normalized positions so display resizing
   does not break the layout. A suspended computer does not cause hours of

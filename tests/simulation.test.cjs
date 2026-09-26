@@ -20,7 +20,7 @@ test("three independent friends choose bounded local activities without AI", () 
   assert.ok(f.events.some(event => event.type === "activity"));
   assert.ok(snapshot.actors.every(actor => actor.needs.energy >= 0 && actor.needs.energy <= 100));
   assert.equal(snapshot.relationships.length, 6);
-  assert.ok(snapshot.props.every(prop => ["note", "paper", "ball"].includes(prop.type)));
+  assert.ok(snapshot.props.every(prop => prop.type === "ball"));
 });
 
 test("a competitive friend uses a virtual ball and play improves mood", () => {
@@ -86,11 +86,11 @@ test("offline dialogue varies instead of repeating one greeting", () => {
   assert.ok(lines.every(line => !line.startsWith("Hey")));
 });
 
-test("virtual mess is bounded and can be undone or cleaned", () => {
+test("virtual balls are bounded and can be undone or cleaned", () => {
   const f = fixture();
-  for (let i = 0; i < 20; i++) f.world.addProp("note", { x: 300 + i, y: 350 });
+  for (let i = 0; i < 20; i++) f.world.addProp("ball", { x: 300 + i, y: 350 });
   assert.equal(f.world.snapshot().props.length, 12);
-  assert.equal(f.world.addProp("paper", { x: 200, y: 200 }), null);
+  assert.equal(f.world.addProp("ball", { x: 200, y: 200 }), null);
   assert.equal(f.world.undoProp(), true);
   assert.equal(f.world.snapshot().props.length, 11);
   f.world.cleanDesktop();
@@ -98,15 +98,23 @@ test("virtual mess is bounded and can be undone or cleaned", () => {
   assert.equal(f.world.undoProp(), false);
 });
 
-test("automatic prank notes expire and do not survive a restart", () => {
-  const friend = mockFriends[2];
+test("autonomous friends do not produce pranks or decorations", () => {
+  const friend = mockFriends[0];
   const world = new DesktopWorld({ friends: [friend], bounds: { width: 900, height: 600 }, random: () => 0.5 });
-  world.addProp("note", { x: 300, y: 350 }, friend.id);
-  world.addProp("ball", { x: 450, y: 350 });
-  assert.deepEqual(world.exportSave().props.map(prop => prop.type), ["ball"]);
   world.tick(0);
   for (let now = 100; now <= 21000; now += 100) world.tick(now);
-  assert.deepEqual(world.snapshot().props.map(prop => prop.type), ["ball"]);
+  assert.equal(world.snapshot().props.length, 0);
+  assert.ok(world.snapshot().actors.every(actor => actor.activity !== "prank"));
+});
+
+test("old saved decorations are discarded while character state survives", () => {
+  const f = fixture();
+  assert.equal(f.world.addProp("note", { x: 300, y: 300 }), null);
+  const save = f.world.exportSave();
+  save.props.push({ id: "prop-99", type: "note", xRatio: 0.5, yRatio: 0.5, createdAt: 0, createdBy: "demo-alex" });
+  assert.equal(f.world.importSave(save), true);
+  assert.equal(f.world.snapshot().props.length, 0);
+  assert.equal(f.world.snapshot().actors.length, 3);
 });
 
 test("save restores normalized positions and rejects malformed records", () => {

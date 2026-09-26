@@ -10,7 +10,6 @@ const ENTER_DISTANCE = 105;
 const LEAVE_DISTANCE = 155;
 const ENCOUNTER_COOLDOWN = 60_000;
 const SCENE_COOLDOWN = 12_000;
-const AUTO_PROP_LIFETIME = 20_000;
 const BODY_MARGIN = 42;
 
 type WorldOptions = {
@@ -48,7 +47,6 @@ export class DesktopWorld {
   private decisionAt = new Map<string, number>();
   private activityEndsAt = new Map<string, number>();
   private headings = new Map<string, number>();
-  private lastPrankAt = new Map<string, number>();
   private insidePairs = new Set<string>();
   private nextSceneId = 1;
   private nextPropId = 1;
@@ -117,9 +115,6 @@ export class DesktopWorld {
   private step(delta: number): void {
     this.elapsedMs += delta;
     if (this.scene && this.elapsedMs >= this.sceneEndsAt) this.finishScene();
-    const beforeCleanup = this.props.length;
-    this.props = this.props.filter(prop => prop.createdBy === "user" || this.elapsedMs - prop.createdAt < AUTO_PROP_LIFETIME);
-    if (this.props.length !== beforeCleanup) this.emit({ type: "propsChanged", count: this.props.length });
     for (const actor of this.actors) {
       actor.needs.energy = clamp(actor.needs.energy + (actor.activity === "rest" ? 0.8 : -0.09), 0, 100);
       actor.needs.boredom = clamp(actor.needs.boredom + (actor.activity === "read" || actor.activity === "play" ? -0.6 : 0.14), 0, 100);
@@ -150,20 +145,14 @@ export class DesktopWorld {
     ];
     const ball = this.props.find(prop => prop.type === "ball" && !this.actors.some(other => other.reservations.includes(prop.id)));
     if (ball) options.push(["play", actor.personality.competitive * 4 + actor.needs.boredom * 0.3 + (100 - actor.mood.joy) * 0.25 + noise()]);
-    if (this.props.length < MAX_PROPS && this.elapsedMs - (this.lastPrankAt.get(actor.id) ?? -Infinity) >= 15_000) options.push(["prank", actor.personality.chaos * 4 + actor.personality.brainrot * 2 + actor.needs.boredom * 0.42 + noise()]);
     options.sort((a, b) => b[1] - a[1]);
     const activity = options[0][0];
     actor.activity = activity; actor.activityVersion++;
     this.decisionAt.set(actor.id, this.elapsedMs + 3000 + this.random() * 5000);
-    this.activityEndsAt.set(actor.id, this.elapsedMs + (activity === "prank" ? 700 : 2500 + this.random() * 2400));
+    this.activityEndsAt.set(actor.id, this.elapsedMs + 2500 + this.random() * 2400);
     if (activity === "walk") this.headings.set(actor.id, this.random() * Math.PI * 2);
     if (activity === "play" && ball) actor.reservations = [ball.id];
     this.emit({ type: "activity", actorId: actor.id, activity });
-    if (activity === "prank") {
-      this.lastPrankAt.set(actor.id, this.elapsedMs);
-      this.addProp("note", actor.position, actor.id);
-      this.beginScene("prop_prank", [actor]);
-    }
   }
   private checkEncounters(): void {
     for (let i = 0; i < this.actors.length; i++) for (let j = i + 1; j < this.actors.length; j++) {
@@ -263,7 +252,7 @@ export class DesktopWorld {
     return true;
   }
   addProp(type: Prop["type"], position: Point, createdBy = "user"): Prop | null {
-    if (this.props.length >= MAX_PROPS || !Number.isFinite(position.x) || !Number.isFinite(position.y)) return null;
+    if (type !== "ball" || this.props.length >= MAX_PROPS || !Number.isFinite(position.x) || !Number.isFinite(position.y)) return null;
     const prop: Prop = { id: `prop-${this.nextPropId++}`, type, position: this.confined(position), createdAt: this.elapsedMs, createdBy };
     this.props.push(prop); this.emit({ type: "propAdded", prop }); this.emit({ type: "propsChanged", count: this.props.length });
     return { ...prop, position: { ...prop.position } };
@@ -298,6 +287,8 @@ export class DesktopWorld {
     const validScore = (score: number) => Number.isFinite(score) && score >= 0 && score <= 100;
     try {
       if (!save.actors.every(actor => allowed.has(actor.id) && Object.values(actor.needs).every(validScore) && Object.values(actor.mood).every(validScore) && [actor.xRatio, actor.yRatio].every(value => Number.isFinite(value) && value >= 0 && value <= 1))) return false;
+      // Accept old saved decorations only so the rest of an existing save survives;
+      // they are discarded below and can never become visible again.
       if (!save.props.every(prop => typeof prop.id === "string" && /^prop-[1-9]\d*$/.test(prop.id) && ["note", "paper", "ball"].includes(prop.type) && typeof prop.createdBy === "string" && prop.createdBy.length <= 100 && Number.isFinite(prop.createdAt) && [prop.xRatio, prop.yRatio].every(value => Number.isFinite(value) && value >= 0 && value <= 1))) return false;
       if (new Set(save.props.map(prop => prop.id)).size !== save.props.length) return false;
       if (save.relationships.length !== this.actors.length * (this.actors.length - 1)) return false;
@@ -314,7 +305,7 @@ export class DesktopWorld {
     }
     // Saved simulation milliseconds cannot be compared with a fresh session clock.
     this.relationships = new Map(save.relationships.map(relation => [`${relation.fromId}->${relation.toId}`, { ...relation, lastEncounterAt: -Infinity }]));
-    this.props = save.props.filter(prop => prop.createdBy === "user").map(prop => ({ id: prop.id, type: prop.type, position: this.confined({ x: prop.xRatio * this.bounds.width, y: prop.yRatio * this.bounds.height }), createdAt: prop.createdAt, createdBy: prop.createdBy }));
+    this.props = save.props.filter(prop => prop.type === "ball" && prop.createdBy === "user").map(prop => ({ id: prop.id, type: "ball", position: this.confined({ x: prop.xRatio * this.bounds.width, y: prop.yRatio * this.bounds.height }), createdAt: prop.createdAt, createdBy: prop.createdBy }));
     this.nextPropId = Math.max(0, ...this.props.map(prop => Number(prop.id.replace("prop-", "")) || 0)) + 1;
     return true;
   }

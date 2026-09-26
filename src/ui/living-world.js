@@ -108,15 +108,16 @@ export function createLivingWorld({ friends, bounds, personality, arena, enabled
       entry.bubble.classList.toggle("bubble-left", actor.position.x > state.bounds.width - 190);
       entry.bubble.classList.toggle("bubble-below", actor.position.y < 180);
     }
-    const current = new Set(state.props.map(prop => prop.id));
+    const visibleProps = state.props.filter(prop => prop.type === "ball");
+    const current = new Set(visibleProps.map(prop => prop.id));
     for (const [id, node] of props) if (!current.has(id)) { node.remove(); props.delete(id); }
-    for (const prop of state.props) {
+    for (const prop of visibleProps) {
       let node = props.get(prop.id);
       if (!node) {
         node = document.createElement("div");
         node.className = `world-prop world-prop-${prop.type}`;
         node.setAttribute("aria-label", `virtual ${prop.type}`);
-        node.textContent = prop.type === "note" ? "✦" : prop.type === "paper" ? "◌" : "●";
+        node.textContent = "●";
         propLayer.append(node); props.set(prop.id, node);
       }
       node.style.left = `${prop.position.x}px`;

@@ -1,7 +1,7 @@
 import type { FriendCharacter } from "../shared/types.js";
 import type { Bounds, Personality, Point } from "../game/types.js";
 
-export type Activity = "idle" | "walk" | "read" | "rest" | "play" | "talk" | "prank" | "dragged";
+export type Activity = "idle" | "walk" | "read" | "rest" | "play" | "talk" | "dragged";
 export type Needs = { energy: number; boredom: number; hygiene: number; social: number };
 export type Mood = { joy: number; irritation: number };
 export type Actor = {
@@ -25,12 +25,12 @@ export type Relationship = {
 };
 export type Prop = {
   id: string;
-  type: "note" | "paper" | "ball";
+  type: "ball";
   position: Point;
   createdAt: number;
   createdBy: string;
 };
-export type SceneKind = "encounter" | "drag_release" | "prop_prank";
+export type SceneKind = "encounter" | "drag_release";
 export type SceneInput = {
   sceneId: string;
   kind: SceneKind;

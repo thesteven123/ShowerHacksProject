@@ -46,9 +46,6 @@ export function offlineScene(scene: SceneInput): SceneOutput {
       ...(second ? [{ speakerId: second.id, text: "You two going somewhere?" }] : []),
     ],
   };
-  if (scene.kind === "prop_prank") return {
-    intent: "tease", lines: [{ speakerId: first.id, text: "I decorated your desktop. You're welcome." }],
-  };
   const encounterLines = [
     [`What are you plotting, ${second?.name ?? "friend"}?`, "Absolutely nothing. Probably."],
     ["Race you across the desktop?", "You're on."],

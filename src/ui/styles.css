@@ -887,16 +887,6 @@ summary span {
   pointer-events: none;
   font-size: 20px;
 }
-.world-prop-note {
-  padding: 6px;
-  transform: translate(-50%, -100%) rotate(-8deg);
-  background: #fff4a7;
-  color: #302923;
-  box-shadow: 0 3px 8px #0004;
-  font-size: 9px;
-  font-weight: 800;
-}
-.world-prop-paper { color: #f3f4e9; }
 .world-prop-ball { color: #ffb45f; }
 .world-actions {
   display: flex;
