@@ -3,6 +3,7 @@ dist/
 .DS_Store
 *.log
 .vite/
+_p4_backup/
 
 # Local photo pipeline outputs (use create:character; do not commit personal photos)
 packages/character-creator/assets/created/
