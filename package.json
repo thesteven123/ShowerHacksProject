@@ -4,15 +4,28 @@
   "private": true,
   "description": "A transparent desktop overlay game for Tiny Menaces.",
   "main": "dist/electron/main.js",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
   "scripts": {
     "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
     "build": "npm run clean && tsc -p tsconfig.json && node scripts/copy-ui.cjs",
+    "build:creator": "npm run build -w @tiny-menaces/shared && npm run build -w @tiny-menaces/character-creator",
     "start": "npm run build && electron .",
-    "typecheck": "tsc --noEmit -p tsconfig.json"
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "preview": "npm run dev -w @tiny-menaces/character-preview",
+    "generate:mocks": "npm run build:creator && npm run generate:mocks -w @tiny-menaces/character-creator",
+    "create:character": "npm run build:creator && tsx packages/character-creator/scripts/create-from-photo.ts",
+    "create:from-face-crop": "npm run build:creator && tsx packages/character-creator/scripts/create-from-face-crop.ts",
+    "face-crop:avatar": "npm run build:creator && tsx packages/character-creator/scripts/face-crop-to-avatar.ts",
+    "smoke:character": "npm run build:creator && tsx packages/character-creator/scripts/smoke-create-character.ts",
+    "verify:preview": "tsx scripts/verify-preview-assets.ts"
   },
   "devDependencies": {
     "@types/node": "^26.6.3",
     "electron": "^44.4.5",
+    "tsx": "^4.19.2",
     "typescript": "^7.0.2"
   },
   "engines": {
