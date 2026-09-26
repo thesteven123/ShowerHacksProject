@@ -1,3 +1,12 @@
 # Reactions work area
 
-Person 4: build the character-and-event reaction function here. Agree with the team on its return shape (line/effect) before wiring it into the game; keep sponsor search integrations out of the local-game setup.
+Person 4: `getReaction(character, event)` and `createReactionEngine` live here.
+
+```ts
+import { createReactionEngine, getReaction } from "../reactions";
+
+const reaction = getReaction(character, "hit");
+// reaction.line, reaction.antic, reaction.effect, reaction.sound
+```
+
+Person 3 emits `hit`, `idle`, `respawn`, or `roundEnded`. This folder returns the line, stupid bit, effect, and sound. Local quote search works without Moss keys.
