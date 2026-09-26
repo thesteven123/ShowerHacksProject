@@ -108,13 +108,13 @@ If the core game works with **placeholder characters** first (doc’s rule), you
 
 ### Next — you (Person 2)
 
-- [ ] **Document roster workflow:** Either add `--add-to-roster` on `create:character` or a short note that custom chars must be appended to `assets/mockCharacters.json` (regenerating mocks wipes manual entries).
+- [x] **Roster workflow:** `face-crop:avatar --roster` upserts `characters.json`; dev mocks stay in `mockCharacters.json` (`generate:mocks` does not wipe real friends).
 - [ ] **Push `character-creator` branch** so Person 1/3/5 can depend on packages (`158498a` initial sprites commit is local until pushed).
 - [ ] **Optional polish:** Better default quotes; tighter face crop when you add face detection; keep `fio-face.png` out of git if photos should stay local.
 
 ### Next — with Person 1 (Electron midpoint)
 
-- [ ] **Midpoint:** One mock (or Phil) animates in the transparent overlay — wire `loadMockCharacters()` / path resolver in `src/electron/main.ts`, expose full roster over IPC, reuse `apps/character-preview/src/spriteRenderer.ts` in renderer.
+- [ ] **Midpoint:** One mock (or real friend) animates in the transparent overlay — wire `loadRosterCharacters()` / path resolver in `src/electron/main.ts`, expose full roster over IPC, reuse `apps/character-preview/src/spriteRenderer.ts` in renderer.
 - [ ] **Unify types:** Electron should import `FriendCharacter` from `@tiny-menaces/shared` (or mirror the `sprite` field); today `src/shared/types.ts` is portrait-only.
 - [ ] **Photo upload path:** Main reads file → `createCharacterFromPhoto` → save under `userData` with `file://` URLs (see integration notes).
 

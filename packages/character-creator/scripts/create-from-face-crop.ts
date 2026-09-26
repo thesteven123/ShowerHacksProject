@@ -2,6 +2,7 @@ import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createCharacterFromFaceCrop } from "../src/createCharacterFromFaceCrop.js";
+import { upsertRosterCharacter } from "../src/roster.js";
 import { faceCropUsage, parseFaceCropArgs } from "./lib/faceCropCli.js";
 
 function usage(): never {
@@ -25,7 +26,14 @@ async function main() {
     outputDir,
     publicPathPrefix: `/built/${args.slug}/`,
     headFraming: args.headFraming,
+    bodyMode: args.bodyMode,
+    sourceDir: args.sourceDir,
   });
+
+  if (args.addToRoster) {
+    await upsertRosterCharacter(character);
+    console.log("Roster: updated characters.json →", character.id);
+  }
 
   const jsonPath = path.join(outputDir, `${args.slug}.json`);
   await writeFile(jsonPath, JSON.stringify(character, null, 2));

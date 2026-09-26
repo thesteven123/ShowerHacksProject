@@ -5,67 +5,73 @@ Person 2 package: photo → `FriendCharacter` + sprite sheets. No Electron depen
 ## API
 
 - `createCharacterFromPhoto(photoBuffer, options)` — full photo → center crop → portrait + sheet (random UUID filenames).
-- `createCharacterFromFaceCrop(faceBuffer, options)` — pre-cropped face: **scale only** (no extract), stable `id` / filenames.
-- `loadMockCharacters()` — three fake friends for parallel dev.
-- `cropFace`, `styleFace`, `buildSpriteSheet` — lower-level steps.
+- `createCharacterFromFaceCrop(faceBuffer, options)` — pre-cropped face: **scale only** (no extract), stable `id` / filenames. Optional `bodyMode: "photo"` uses part crops from `sourceDir`.
+- `loadRosterCharacters()` — real friends from `data/characters.json`.
+- `upsertRosterCharacter(character)` — merge one entry into roster JSON (used by `--roster` CLI).
+- `loadMockCharacters()` — dev-only Alex / Jordan / Sam (`mockCharacters.json`).
+- `cropFace`, `styleFace`, `buildSpriteSheet`, `prepareScaledBodyPartsFromDir` — lower-level steps.
 
-## Mocks
+## Real friends roster
+
+**Preview and game integration** load [`assets/characters.json`](assets/characters.json) (mirror in [`data/characters.json`](data/characters.json)). Dev placeholders live separately in `mockCharacters.json` (see below).
+
+### Build + register (photo body)
+
+For each friend, put crops in `assets/sources/<slug>/v2_/` (files `*1*` … `*6*`), then from repo root:
+
+```bash
+npm run face-crop:avatar -- packages/character-creator/assets/sources/<slug>/v2_ \
+  --body photo --slug <slug> --name "<Name>" --roster
+```
+
+`--roster` upserts into `characters.json` (keeps existing **quotes** on rebuild). Output PNGs: `assets/built/<slug>/`.
+
+```bash
+npm run preview   # http://localhost:5174 — Kelvin, Maanya, …
+```
+
+Optional: check **Show dev mocks** in preview for Alex / Jordan / Sam.
+
+Verify assets:
+
+```bash
+npm run verify:preview
+```
+
+### Photo part indices
+
+| Index in filename | Part |
+| --- | --- |
+| `1` / `1crop` | Face |
+| `2` | Torso |
+| `3` | Right arm (character-facing) |
+| `4` | Left arm |
+| `5` | Right leg |
+| `6` | Left leg |
+
+Example:
+
+```bash
+npm run face-crop:avatar -- packages/character-creator/assets/sources/kelvin/v2_ \
+  --body photo --slug kelvin --name Kelvin --roster
+```
+
+**Head framing** (`--framing`): `bbox` (default) or `template` — see below.
+
+## Dev mocks (optional)
+
+Procedural Alex / Jordan / Sam for hitbox testing only. **Does not touch `characters.json`.**
 
 ```bash
 npm run generate:mocks -w @tiny-menaces/character-creator
 ```
 
-## Face crop → avatar (deterministic)
-
-From repo root:
-
-### Kelvin (repeat workflow)
-
-Re-run after pipeline or source crop changes. Uses **bbox** framing (default), writes the **canonical** `built/kelvin/` paths that `mockCharacters.json` already references, and refreshes `pipeline/` debug PNGs.
-
-```bash
-npm run face-crop:avatar -- packages/character-creator/assets/sources/kelvin --slug kelvin
-```
-
-Outputs:
-
-- `packages/character-creator/assets/built/kelvin/kelvin-portrait.png`
-- `packages/character-creator/assets/built/kelvin/kelvin-sheet.png`
-- `packages/character-creator/assets/built/kelvin/kelvin.json`
-- `packages/character-creator/assets/built/kelvin/pipeline/` (scaled, portrait, sheet, `1b-subject-bbox.png`)
-
-Preview in the browser (repo root, then hard refresh **http://localhost:5174**):
-
-```bash
-npm run preview
-```
-
-Pick **Kelvin** in the roster dropdown. Do not run `generate:mocks` afterward — it rebuilds procedural mocks and does not refresh Kelvin.
-
-### Other sources / framing
-
-```bash
-# Default slug is kelvin-bbox (folder name + framing suffix) — not wired into mock roster
-npm run face-crop:avatar -- packages/character-creator/assets/sources/kelvin
-
-npm run face-crop:avatar -- packages/character-creator/assets/sources/kelvin --framing template --slug kelvin
-```
-
-**Head framing** (`--framing`):
+## Head framing
 
 | Mode | Flag | Effect |
 |------|------|--------|
-| B | `bbox` (default) | Subject pixel bbox scaled into head slot; no oval; sprite uses `meet` |
-| A | `template` | Fixed oval in portrait + oval clip + zoom in sprite sheet |
-
-Default output slug: `kelvin-bbox` (or `kelvin-template` when using `--framing template`). Pass `--slug kelvin` to write the canonical folder without a suffix.
-
-Browse `*-sheet.png`, `*-portrait.png`, and `pipeline/` (`1b-subject-bbox.png` for bbox only).
-
-```bash
-# Same API, no pipeline/ folder
-npm run create:from-face-crop -- packages/character-creator/assets/sources/kelvin --framing bbox
-```
+| B | `bbox` (default) | Subject bbox in head slot; no oval |
+| A | `template` | Oval portrait + clip |
 
 ## Contract
 

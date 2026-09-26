@@ -5,7 +5,7 @@ import type { FriendCharacter } from "@tiny-menaces/shared";
 
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 
-/** Loads bundled mock roster (three fake friends). */
+/** Dev-only placeholders (Alex, Jordan, Sam) for hitbox / renderer testing. */
 export async function loadMockCharacters(): Promise<FriendCharacter[]> {
   const jsonPath = path.join(moduleDir, "..", "data", "mockCharacters.json");
   const raw = await readFile(jsonPath, "utf8");
@@ -13,3 +13,6 @@ export async function loadMockCharacters(): Promise<FriendCharacter[]> {
 }
 
 export { loadMockCharacters as getMockCharacters };
+
+export { loadRosterCharacters, upsertRosterCharacter } from "./roster.js";
+export type { UpsertRosterOptions } from "./roster.js";

@@ -39,7 +39,14 @@ Transform to world space using the entity position and anchor when testing click
 
 `imageUrl` is a separate 64×64 portrait for roster/UI — oval alpha cutout (not a square photo frame), not the sprite sheet.
 
-## Mock data
+## Roster data
+
+**Real friends (game + preview default):**
+
+- JSON: [`packages/character-creator/data/characters.json`](../packages/character-creator/data/characters.json)
+- Built sheets: [`packages/character-creator/assets/built/`](../packages/character-creator/assets/built/) (`/built/<id>/…` URLs in JSON)
+
+**Dev placeholders (optional in preview):**
 
 - JSON: [`packages/character-creator/data/mockCharacters.json`](../packages/character-creator/data/mockCharacters.json)
 - Sheets: [`packages/character-creator/assets/mocks/`](../packages/character-creator/assets/mocks/)

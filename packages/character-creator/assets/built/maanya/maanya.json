@@ -1,0 +1,59 @@
+{
+  "id": "maanya",
+  "name": "Maanya",
+  "imageUrl": "/built/maanya/maanya-portrait.png",
+  "vibe": "chaotic",
+  "quotes": {
+    "idle": [
+      "…"
+    ],
+    "hit": [
+      "Hey!"
+    ],
+    "respawn": [
+      "I'm back!"
+    ]
+  },
+  "sprite": {
+    "spriteSheetUrl": "/built/maanya/maanya-sheet.png",
+    "frameWidth": 72,
+    "frameHeight": 108,
+    "frameCount": 14,
+    "anchor": {
+      "x": 36,
+      "y": 107
+    },
+    "hitbox": {
+      "x": 4,
+      "y": 4,
+      "width": 64,
+      "height": 99
+    },
+    "animations": {
+      "idle": {
+        "startFrame": 0,
+        "endFrame": 3,
+        "fps": 6,
+        "loop": true
+      },
+      "walk": {
+        "startFrame": 4,
+        "endFrame": 7,
+        "fps": 8,
+        "loop": true
+      },
+      "hit": {
+        "startFrame": 8,
+        "endFrame": 10,
+        "fps": 12,
+        "loop": false
+      },
+      "respawn": {
+        "startFrame": 11,
+        "endFrame": 13,
+        "fps": 10,
+        "loop": false
+      }
+    }
+  }
+}

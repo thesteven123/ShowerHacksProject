@@ -1,4 +1,7 @@
-export { cropFace, scaleFaceCrop } from "./cropFace.js";
+export { cropFace, scaleFaceCrop, scalePartCrop } from "./cropFace.js";
+export type { BodyMode, ScaledBodyParts } from "./bodyPartSlots.js";
+export { resolvePartCropPaths } from "./resolvePartCrops.js";
+export { prepareScaledBodyPartsFromDir, prepareScaledBodyPartsFromPaths } from "./prepareBodyParts.js";
 export {
   findSubjectRect,
   fitSubjectInSquare,
@@ -17,4 +20,5 @@ export {
   type CreateCharacterFromFaceCropInput,
   type FaceCropPipelineResult,
 } from "./createCharacterFromFaceCrop.js";
-export { loadMockCharacters, getMockCharacters } from "./mocks.js";
+export { loadMockCharacters, getMockCharacters, loadRosterCharacters } from "./mocks.js";
+export { upsertRosterCharacter, type UpsertRosterOptions } from "./roster.js";

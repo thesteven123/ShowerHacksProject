@@ -111,7 +111,7 @@ async function main() {
   const json = `${JSON.stringify(characters, null, 2)}\n`;
   await writeFile(dataPath, json);
   await writeFile(path.join(root, "assets", "mockCharacters.json"), json);
-  console.log(`Wrote ${characters.length} mocks to ${dataPath}`);
+  console.log(`Wrote ${characters.length} dev mocks to ${dataPath} (does not touch characters.json)`);
 }
 
 main().catch((err) => {

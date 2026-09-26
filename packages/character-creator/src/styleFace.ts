@@ -8,6 +8,22 @@ const VIBE_TINT: Record<CharacterVibe, { r: number; g: number; b: number }> = {
   supportive: { r: 100, g: 220, b: 160 },
 };
 
+/** Light vibe wash on limb/torso photos (same alpha as portrait tint). */
+export async function applyVibeTintToImage(imagePng: Buffer, vibe: CharacterVibe): Promise<Buffer> {
+  const tint = VIBE_TINT[vibe];
+  return sharp(imagePng)
+    .composite([
+      {
+        input: Buffer.from([tint.r, tint.g, tint.b, 40]),
+        raw: { width: 1, height: 1, channels: 4 },
+        tile: true,
+        blend: "over",
+      },
+    ])
+    .png()
+    .toBuffer();
+}
+
 /** Oval face silhouette (portrait framing), not a square photo frame. */
 function faceOvalGeometry(size: number) {
   const cx = size / 2;

@@ -48,3 +48,20 @@ export async function scaleFaceCrop(input: Buffer, size = 256): Promise<FaceCrop
 
   return { buffer, width: size, height: size };
 }
+
+/** Limb crop: scale into a fixed slot with transparent letterboxing. */
+export async function scalePartCrop(
+  input: Buffer,
+  width: number,
+  height: number,
+): Promise<FaceCropResult> {
+  const buffer = await sharp(input)
+    .resize(width, height, {
+      fit: "contain",
+      background: { r: 0, g: 0, b: 0, alpha: 0 },
+    })
+    .png()
+    .toBuffer();
+
+  return { buffer, width, height };
+}

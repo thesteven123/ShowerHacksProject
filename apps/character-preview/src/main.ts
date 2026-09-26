@@ -7,16 +7,28 @@ import {
   type SpriteEntity,
 } from "./spriteRenderer";
 
-async function loadMocks(): Promise<FriendCharacter[]> {
-  const res = await fetch("/mockCharacters.json");
-  if (!res.ok) throw new Error("mockCharacters.json missing — run npm run generate:mocks");
-  return res.json();
+async function fetchJson<T>(url: string): Promise<T> {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`${url} missing (${res.status})`);
+  return res.json() as Promise<T>;
+}
+
+async function loadRoster(includeDevMocks: boolean): Promise<FriendCharacter[]> {
+  const roster = await fetchJson<FriendCharacter[]>("/characters.json");
+  if (!includeDevMocks) return roster;
+  try {
+    const mocks = await fetchJson<FriendCharacter[]>("/mockCharacters.json");
+    return [...roster, ...mocks];
+  } catch {
+    return roster;
+  }
 }
 
 const canvas = document.getElementById("stage") as HTMLCanvasElement;
 const ctx = canvas.getContext("2d")!;
 const rosterSelect = document.getElementById("roster") as HTMLSelectElement;
 const clipSelect = document.getElementById("clip") as HTMLSelectElement;
+const devMocksCheckbox = document.getElementById("dev-mocks") as HTMLInputElement;
 const quoteEl = document.getElementById("quote")!;
 const statusEl = document.getElementById("status")!;
 
@@ -37,7 +49,10 @@ function syncRosterUI() {
     rosterSelect.appendChild(opt);
   }
   const current = characters[0];
-  if (!current) return;
+  if (!current) {
+    statusEl.textContent = "No characters in roster — run face-crop:avatar with --roster";
+    return;
+  }
   entity = {
     character: current,
     x: canvas.width / 2,
@@ -51,6 +66,11 @@ function syncRosterUI() {
   quoteEl.textContent = `"${pickQuote(current, "idle")}"`;
 }
 
+async function reloadCharacters() {
+  characters = await loadRoster(devMocksCheckbox.checked);
+  syncRosterUI();
+}
+
 rosterSelect.addEventListener("change", () => {
   const c = characters.find((x) => x.id === rosterSelect.value);
   if (!c || !entity) return;
@@ -61,6 +81,12 @@ rosterSelect.addEventListener("change", () => {
 
 clipSelect.addEventListener("change", () => {
   playClip(entity, clipSelect.value as SpriteEntity["clip"]);
+});
+
+devMocksCheckbox.addEventListener("change", () => {
+  void reloadCharacters().catch((err) => {
+    statusEl.textContent = String(err);
+  });
 });
 
 canvas.addEventListener("click", (ev) => {
@@ -81,27 +107,26 @@ canvas.addEventListener("click", (ev) => {
 
 document.getElementById("upload")!.addEventListener("change", () => {
   statusEl.textContent =
-    "Upload runs in Node via createCharacterFromPhoto(); use preview after adding to roster or hackathon merge.";
+    "Upload runs in Node via createCharacterFromPhoto(); use face-crop:avatar --roster after adding crops.";
 });
 
 let last = performance.now();
 function loop(now: number) {
   const dt = (now - last) / 1000;
   last = now;
-  advanceEntity(entity, dt);
-  if (entity.clip === "idle" || entity.clip === "walk") {
-    // gentle wander
-    entity.x += Math.sin(now / 500) * 0.4;
+  if (entity) {
+    advanceEntity(entity, dt);
+    if (entity.clip === "idle" || entity.clip === "walk") {
+      entity.x += Math.sin(now / 500) * 0.4;
+    }
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    void drawEntity(ctx, entity);
   }
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  void drawEntity(ctx, entity);
   requestAnimationFrame(loop);
 }
 
-loadMocks()
-  .then((data) => {
-    characters = data;
-    syncRosterUI();
+reloadCharacters()
+  .then(() => {
     requestAnimationFrame(loop);
   })
   .catch((err) => {

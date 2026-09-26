@@ -1,24 +1,18 @@
 import sharp from "sharp";
 import { DEFAULT_SPRITE_LAYOUT, type CharacterVibe } from "@tiny-menaces/shared";
+import {
+  ARM_SLOT,
+  HEAD_SLOT,
+  LEG_SLOT,
+  LEGS_Y,
+  type ScaledBodyParts,
+  TORSO_SLOT,
+  TORSO_Y,
+} from "./bodyPartSlots.js";
 import type { HeadFramingMode } from "./headFraming.js";
 import { faceOvalClipPathSvg } from "./styleFace.js";
 
 const { frameWidth, frameHeight, frameCount } = DEFAULT_SPRITE_LAYOUT;
-
-/** Proportions for procedural mock sheets (matches docs/sprite-handoff-person3.md). */
-const HEAD_SIZE = 72;
-const TORSO_W = 28;
-const TORSO_H = 38;
-const LEG_H = 34;
-const LEG_W = 12;
-const ARM_W = 10;
-const ARM_H = 26;
-/** Overlap so stacked art height ≈ 107px inside the frame. */
-const NECK_OVERLAP = 17;
-const HIP_OVERLAP = 20;
-
-const TORSO_Y = HEAD_SIZE - NECK_OVERLAP;
-const LEGS_Y = TORSO_Y + TORSO_H - HIP_OVERLAP;
 
 const BODY_STROKE = "#14141c";
 
@@ -67,23 +61,9 @@ function limbRect(x: number, y: number, w: number, h: number, fill: string, rx =
   return `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${rx}" fill="${fill}" stroke="${BODY_STROKE}" stroke-width="2"/>`;
 }
 
-type FrameLayout = {
-  headSize: number;
-  headX: number;
-  headY: number;
-};
-
-function frameLayout(index: number): FrameLayout & ReturnType<typeof frameOffsets> {
-  const offsets = frameOffsets(index);
-  const { dx, dy, headScale } = offsets;
-  const cx = frameWidth / 2 + dx;
-  const headSize = HEAD_SIZE * headScale;
-  return {
-    ...offsets,
-    headSize,
-    headX: cx - headSize / 2,
-    headY: dy,
-  };
+function limbImage(png: Buffer, x: number, y: number, w: number, h: number): string {
+  const dataUri = `data:image/png;base64,${png.toString("base64")}`;
+  return `<image href="${dataUri}" x="${x}" y="${y}" width="${w}" height="${h}" preserveAspectRatio="xMidYMid meet"/>`;
 }
 
 function frameSvg(
@@ -91,78 +71,78 @@ function frameSvg(
   index: number,
   vibe: CharacterVibe,
   headFraming: HeadFramingMode,
-  embedHead: boolean,
+  bodyParts?: ScaledBodyParts,
 ): Buffer {
-  const { dx, dy, legSpread, leftArmDy, rightArmDy, headSize, headX, headY } = frameLayout(index);
+  const { dx, dy, legSpread, headScale, leftArmDy, rightArmDy } = frameOffsets(index);
   const { torso: torsoFill, limb: limbFill } = VIBE_BODY[vibe];
   const cx = frameWidth / 2 + dx;
-  const torsoX = cx - TORSO_W / 2;
+  const torsoX = cx - TORSO_SLOT.width / 2;
+  const headSize = HEAD_SLOT * headScale;
+  const headX = cx - headSize / 2;
+  const headY = dy;
   const torsoY = TORSO_Y + dy;
   const legsY = LEGS_Y + dy;
-  const leftLegX = cx - LEG_W - 2 + legSpread;
+  const leftLegX = cx - LEG_SLOT.width - 2 + legSpread;
   const rightLegX = cx + 2 + legSpread;
-  const leftArmX = torsoX - ARM_W + 4;
-  const rightArmX = torsoX + TORSO_W - 4;
+  const leftArmX = torsoX - ARM_SLOT.width + 4;
+  const rightArmX = torsoX + TORSO_SLOT.width - 4;
   const armY = torsoY + 6;
+  const faceDataUri = `data:image/png;base64,${styledFacePng.toString("base64")}`;
 
-  let headMarkup = "";
-  if (embedHead) {
-    const faceDataUri = `data:image/png;base64,${styledFacePng.toString("base64")}`;
-    const faceClip = faceOvalClipPathSvg(headSize);
-    const clipId = `faceClip${index}`;
-    const headImage =
-      headFraming === "bbox"
-        ? `<image href="${faceDataUri}" x="0" y="0" width="${headSize}" height="${headSize}" preserveAspectRatio="xMidYMid meet"/>`
-        : `<defs>
-            <clipPath id="${clipId}">
-              ${faceClip}
-            </clipPath>
-          </defs>
-          <image href="${faceDataUri}" x="0" y="0" width="${headSize}" height="${headSize}" preserveAspectRatio="xMidYMid slice" clip-path="url(#${clipId})"/>`;
-    headMarkup = `<g transform="translate(${headX}, ${headY})">${headImage}</g>`;
-  }
+  const faceClip = faceOvalClipPathSvg(headSize);
+  const clipId = `faceClip${index}`;
+
+  const headImage =
+    headFraming === "bbox"
+      ? `<image href="${faceDataUri}" x="0" y="0" width="${headSize}" height="${headSize}" preserveAspectRatio="xMidYMid meet"/>`
+      : `<defs>
+          <clipPath id="${clipId}">
+            ${faceClip}
+          </clipPath>
+        </defs>
+        <image href="${faceDataUri}" x="0" y="0" width="${headSize}" height="${headSize}" preserveAspectRatio="xMidYMid slice" clip-path="url(#${clipId})"/>`;
+
+  const armW = ARM_SLOT.width;
+  const armH = ARM_SLOT.height;
+  const legW = LEG_SLOT.width;
+  const legH = LEG_SLOT.height;
+  const torsoW = TORSO_SLOT.width;
+  const torsoH = TORSO_SLOT.height;
+
+  // Facing camera: character's right side is on the viewer's left (leftArmX / leftLegX).
+  const leftArm =
+    bodyParts != null
+      ? limbImage(bodyParts.rightArm, leftArmX, armY + leftArmDy, armW, armH)
+      : limbRect(leftArmX, armY + leftArmDy, armW, armH, limbFill);
+  const rightArm =
+    bodyParts != null
+      ? limbImage(bodyParts.leftArm, rightArmX, armY + rightArmDy, armW, armH)
+      : limbRect(rightArmX, armY + rightArmDy, armW, armH, limbFill);
+  const leftLeg =
+    bodyParts != null
+      ? limbImage(bodyParts.rightLeg, leftLegX, legsY, legW, legH)
+      : limbRect(leftLegX, legsY, legW, legH, limbFill);
+  const rightLeg =
+    bodyParts != null
+      ? limbImage(bodyParts.leftLeg, rightLegX, legsY, legW, legH)
+      : limbRect(rightLegX, legsY, legW, legH, limbFill);
+  const torso =
+    bodyParts != null
+      ? limbImage(bodyParts.torso, torsoX, torsoY, torsoW, torsoH)
+      : limbRect(torsoX, torsoY, torsoW, torsoH, torsoFill, 5);
 
   return Buffer.from(
     `<svg width="${frameWidth}" height="${frameHeight}" xmlns="http://www.w3.org/2000/svg">
-      ${limbRect(leftArmX, armY + leftArmDy, ARM_W, ARM_H, limbFill)}
-      ${limbRect(leftLegX, legsY, LEG_W, LEG_H, limbFill)}
-      ${limbRect(rightLegX, legsY, LEG_W, LEG_H, limbFill)}
-      ${limbRect(torsoX, torsoY, TORSO_W, TORSO_H, torsoFill, 5)}
-      ${limbRect(rightArmX, armY + rightArmDy, ARM_W, ARM_H, limbFill)}
-      ${headMarkup}
+      ${leftArm}
+      ${leftLeg}
+      ${rightLeg}
+      ${torso}
+      ${rightArm}
+      <g transform="translate(${headX}, ${headY})">
+        ${headImage}
+      </g>
     </svg>`,
   );
-}
-
-/** librsvg (sharp SVG) drops PNG alpha on embedded data URIs — composite the head in PNG space. */
-async function compositeBboxHead(bodyFrame: Buffer, styledFacePng: Buffer, layout: FrameLayout): Promise<Buffer> {
-  const slot = Math.max(1, Math.round(layout.headSize));
-  const headImage = await sharp(styledFacePng)
-    .resize(slot, slot, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } })
-    .png()
-    .toBuffer();
-
-  const meta = await sharp(headImage).metadata();
-  const fw = meta.width ?? slot;
-  const fh = meta.height ?? slot;
-  const left = Math.round(layout.headX + (slot - fw) / 2);
-  const top = Math.round(layout.headY + (slot - fh) / 2);
-
-  return sharp(bodyFrame).composite([{ input: headImage, left, top }]).png().toBuffer();
-}
-
-async function renderFrame(
-  styledFacePng: Buffer,
-  index: number,
-  vibe: CharacterVibe,
-  headFraming: HeadFramingMode,
-): Promise<Buffer> {
-  if (headFraming === "bbox") {
-    const layout = frameLayout(index);
-    const body = await sharp(frameSvg(styledFacePng, index, vibe, headFraming, false)).png().toBuffer();
-    return compositeBboxHead(body, styledFacePng, layout);
-  }
-  return sharp(frameSvg(styledFacePng, index, vibe, headFraming, true)).png().toBuffer();
 }
 
 /** Builds a horizontal PNG sprite sheet from a styled face portrait. */
@@ -170,10 +150,12 @@ export async function buildSpriteSheet(
   styledFacePng: Buffer,
   vibe: CharacterVibe = "chaotic",
   headFraming: HeadFramingMode = "template",
+  bodyParts?: ScaledBodyParts,
 ): Promise<Buffer> {
   const frames: Buffer[] = [];
   for (let i = 0; i < frameCount; i++) {
-    frames.push(await renderFrame(styledFacePng, i, vibe, headFraming));
+    const frame = await sharp(frameSvg(styledFacePng, i, vibe, headFraming, bodyParts)).png().toBuffer();
+    frames.push(frame);
   }
 
   const sheet = sharp({

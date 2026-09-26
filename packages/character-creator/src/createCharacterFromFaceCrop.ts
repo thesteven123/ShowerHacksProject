@@ -2,8 +2,10 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { DEFAULT_SPRITE_LAYOUT, type CharacterVibe, type FriendCharacter } from "@tiny-menaces/shared";
 import { buildSpriteSheet } from "./buildSpriteSheet.js";
+import type { BodyMode } from "./bodyPartSlots.js";
 import { scaleFaceCrop } from "./cropFace.js";
 import { drawSubjectRectOverlay, findSubjectRect, type HeadFramingMode } from "./headFraming.js";
+import { prepareScaledBodyPartsFromDir } from "./prepareBodyParts.js";
 import { styleFace } from "./styleFace.js";
 
 export type FaceCropPipelineStage = "scaled" | "portrait" | "sheet";
@@ -27,6 +29,10 @@ export type CreateCharacterFromFaceCropInput = {
   intermediateDir?: string;
   /** template (A) = fixed oval; bbox (B) = subject bbox fit, no oval */
   headFraming?: HeadFramingMode;
+  /** procedural = colored chibi limbs; photo = part crops 2–6 in sourceDir */
+  bodyMode?: BodyMode;
+  /** Character source folder for photo body parts (defaults to face file's directory). */
+  sourceDir?: string;
 };
 
 const DEFAULT_QUOTES: FriendCharacter["quotes"] = {
@@ -52,13 +58,29 @@ export async function runFaceCropToAvatar(
   }
 
   const headFraming = input.headFraming ?? "bbox";
+  const bodyMode = input.bodyMode ?? "procedural";
 
   const scaled = await scaleFaceCrop(faceCrop, SCALED_SIZE);
   const portrait = await styleFace(scaled.buffer, input.vibe, PORTRAIT_SIZE, {
     resizeFit: "contain",
     headFraming,
   });
-  const sheet = await buildSpriteSheet(portrait, input.vibe, headFraming);
+
+  let bodyParts: Awaited<ReturnType<typeof prepareScaledBodyPartsFromDir>> | undefined;
+  if (bodyMode === "photo") {
+    const sourceDir = input.sourceDir;
+    if (!sourceDir) {
+      throw new Error("Photo body mode requires sourceDir (character folder with *2*/*3*/*4* crops).");
+    }
+    bodyParts = await prepareScaledBodyPartsFromDir(sourceDir, input.vibe);
+  }
+
+  const sheet = await buildSpriteSheet(
+    portrait,
+    input.vibe,
+    headFraming,
+    bodyParts?.parts,
+  );
 
   const portraitFile = `${input.id}-portrait.png`;
   const sheetFile = `${input.id}-sheet.png`;
@@ -75,6 +97,13 @@ export async function runFaceCropToAvatar(
       );
     }
     await writeFile(path.join(input.intermediateDir, "2-portrait-64.png"), portrait);
+    if (bodyParts) {
+      await writeFile(path.join(input.intermediateDir, "2-torso-slot.png"), bodyParts.parts.torso);
+      await writeFile(path.join(input.intermediateDir, "3-right-arm-slot.png"), bodyParts.parts.rightArm);
+      await writeFile(path.join(input.intermediateDir, "4-left-arm-slot.png"), bodyParts.parts.leftArm);
+      await writeFile(path.join(input.intermediateDir, "5-right-leg-slot.png"), bodyParts.parts.rightLeg);
+      await writeFile(path.join(input.intermediateDir, "6-left-leg-slot.png"), bodyParts.parts.leftLeg);
+    }
     await writeFile(path.join(input.intermediateDir, "3-sheet.png"), sheet);
   }
 
