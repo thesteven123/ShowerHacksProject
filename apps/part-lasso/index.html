@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Part lasso — Tiny Menaces</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: system-ui, sans-serif;
+        background: #12121a;
+        color: #e8e8f0;
+      }
+      header {
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid #2a2a38;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        align-items: center;
+      }
+      header label {
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+        font-size: 0.9rem;
+      }
+      input[type="text"] {
+        background: #1e1e2a;
+        border: 1px solid #3a3a4a;
+        color: inherit;
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        width: 8rem;
+      }
+      input[type="file"] {
+        font-size: 0.85rem;
+        max-width: 14rem;
+      }
+      select,
+      button {
+        background: #2a2a3a;
+        border: 1px solid #4a4a5a;
+        color: inherit;
+        padding: 0.35rem 0.65rem;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      button.primary {
+        background: #2d6a4f;
+        border-color: #40916c;
+      }
+      button:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+      }
+      main {
+        display: grid;
+        grid-template-columns: 1fr 220px;
+        gap: 0;
+        min-height: calc(100vh - 56px);
+      }
+      #stage-wrap {
+        overflow: auto;
+        padding: 1rem;
+        background: #0a0a10;
+      }
+      canvas {
+        display: block;
+        cursor: crosshair;
+        max-width: 100%;
+        box-shadow: 0 0 0 1px #333;
+      }
+      aside {
+        border-left: 1px solid #2a2a38;
+        padding: 1rem;
+        font-size: 0.85rem;
+      }
+      aside h2 {
+        margin: 0 0 0.5rem;
+        font-size: 0.95rem;
+      }
+      .thumb {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 0.5rem;
+      }
+      .thumb img {
+        width: 48px;
+        height: 48px;
+        object-fit: contain;
+        background: #1a1a24;
+        border: 1px solid #333;
+      }
+      .done {
+        color: #7cfac0;
+      }
+      .pending {
+        color: #888;
+      }
+      #status {
+        margin-top: 1rem;
+        color: #aaa;
+        line-height: 1.4;
+      }
+      .hint {
+        font-size: 0.8rem;
+        color: #888;
+        margin-top: 0.5rem;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <label>Slug <input type="text" id="slug" value="friend" placeholder="kelvin" /></label>
+      <label>Part
+        <select id="part">
+          <option value="2">2 — torso</option>
+          <option value="3">3 — right arm</option>
+          <option value="4">4 — left arm</option>
+          <option value="5">5 — right leg</option>
+          <option value="6">6 — left leg</option>
+        </select>
+      </label>
+      <label>Full body <input type="file" id="fullbody" accept="image/*" /></label>
+      <label>Face (for *1*) <input type="file" id="face" accept="image/*" /></label>
+      <button type="button" id="close-lasso">Close lasso</button>
+      <button type="button" id="undo-point">Undo point</button>
+      <button type="button" id="clear-lasso">Clear</button>
+      <button type="button" id="export" class="primary" disabled>Export crops to folder…</button>
+    </header>
+    <main>
+      <div id="stage-wrap">
+        <canvas id="stage" width="800" height="600"></canvas>
+        <p class="hint">Click around a body part. Double-click or “Close lasso” to save that part. Character-facing arms/legs (see README).</p>
+      </div>
+      <aside>
+        <h2>Parts</h2>
+        <div id="part-list"></div>
+        <p id="status">Load a full-body photo to start.</p>
+      </aside>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

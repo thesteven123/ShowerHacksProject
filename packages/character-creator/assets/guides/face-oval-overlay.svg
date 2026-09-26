@@ -1,0 +1,6 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1024" height="1024" fill="#1a1a24"/>
+  <ellipse cx="512" cy="491.52" rx="368.64" ry="430.08" fill="none" stroke="#ffffff" stroke-width="6" opacity="0.35"/>
+  <ellipse cx="512" cy="491.52" rx="368.64" ry="430.08" fill="none" stroke="#7cfac0" stroke-width="4"/>
+  <text x="512" y="980" text-anchor="middle" fill="#888" font-family="system-ui,sans-serif" font-size="28">Match face to green oval  passport style, not a circle</text>
+</svg>

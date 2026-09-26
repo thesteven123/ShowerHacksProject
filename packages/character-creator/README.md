@@ -15,9 +15,15 @@ Person 2 package: photo → `FriendCharacter` + sprite sheets. No Electron depen
 
 **Preview and game integration** load [`assets/characters.json`](assets/characters.json) (mirror in [`data/characters.json`](data/characters.json)). Dev placeholders live separately in `mockCharacters.json` (see below).
 
+### Taking photos (friends)
+
+Friends send **two photos** only (face + full body). Share [`docs/friend-photo-guide.md`](../../docs/friend-photo-guide.md) and the oval overlay [`assets/guides/face-oval-overlay.png`](assets/guides/face-oval-overlay.png) (matches in-game `template` framing).
+
 ### Build + register (photo body)
 
-For each friend, put crops in `assets/sources/<slug>/v2_/` (files `*1*` … `*6*`), then from repo root:
+**Builder workflow:** two friend photos → [lasso part crops](../../docs/builder-part-crops.md) (`npm run lasso`) → CLI below. You can also place hand-cut crops in `assets/sources/<slug>/` (files `*1*` … `*6*`) without the lasso app.
+
+From repo root:
 
 ```bash
 npm run face-crop:avatar -- packages/character-creator/assets/sources/<slug>/v2_ \
