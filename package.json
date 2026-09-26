@@ -17,6 +17,8 @@
     "test": "npm run build && node --test tests/*.test.cjs",
     "preview": "npm run build && node scripts/preview.cjs",
     "preview:creator": "npm run dev -w @tiny-menaces/character-preview",
+    "lasso": "npm run dev -w @tiny-menaces/part-lasso",
+    "generate:face-overlay": "tsx packages/character-creator/scripts/generate-face-oval-overlay.ts",
     "generate:mocks": "npm run build:creator && npm run generate:mocks -w @tiny-menaces/character-creator",
     "create:character": "npm run build:creator && tsx packages/character-creator/scripts/create-from-photo.ts",
     "create:from-face-crop": "npm run build:creator && tsx packages/character-creator/scripts/create-from-face-crop.ts",

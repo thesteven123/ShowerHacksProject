@@ -12,7 +12,7 @@ const FACE_NAME = /(?:^|[^0-9])1(?:crop)?(?=\.[^.]+$)/i;
 const BODY_NAME = /(?:^|[^0-9])2(?:crop)?(?=\.[^.]+$)/i;
 
 const FRAMINGS: HeadFramingMode[] = ["template", "bbox"];
-const BODY_MODES: BodyMode[] = ["procedural", "photo"];
+const BODY_MODES: BodyMode[] = ["procedural", "photo", "photo_v3"];
 
 export type FaceCropCliArgs = {
   faceCropPath: string;
@@ -153,7 +153,7 @@ export async function parseFaceCropArgs(argv: string[], usage: () => never): Pro
   let resolvedSlug: string;
   if (slugExplicit) {
     resolvedSlug = baseSlug;
-  } else if (bodyMode === "photo") {
+  } else if (bodyMode === "photo" || bodyMode === "photo_v3") {
     resolvedSlug = `${baseSlug}-photo`;
   } else {
     resolvedSlug = `${baseSlug}-${headFraming}`;
@@ -180,7 +180,8 @@ export function faceCropUsage(scriptName: string): string {
   return `Usage: ${scriptName} <character-folder|face-file> [--name Name] [--vibe ${VIBES.join("|")}] [--framing ${FRAMINGS.join("|")}] [--body ${BODY_MODES.join("|")}] [--slug id] [--roster] [--intermediates]
 
 Picks the face input automatically: filename must contain 1 (face).
-Photo body mode (--body photo) requires *2* torso, *3* right arm, *4* left arm, *5* right leg, *6* left leg in the same folder.
+Photo body mode (--body photo) requires *2* torso and *3*–*6* (v2) or *2*–*12* (v3) in the same folder.
+Use --body photo_v3 to require articulated crops (auto-detected when *7*–*12* exist with --body photo).
 When given a folder, prefers *1crop* JPEG/PNG, then *1* HEIC.
 Default slug is <name>-template, <name>-bbox, or <name>-photo unless --slug is set.
 --roster upserts into data/characters.json (real friends roster).`;

@@ -15,9 +15,15 @@ Person 2 package: photo → `FriendCharacter` + sprite sheets. No Electron depen
 
 **Preview and game integration** load [`assets/characters.json`](assets/characters.json) (mirror in [`data/characters.json`](data/characters.json)). Dev placeholders live separately in `mockCharacters.json` (see below).
 
+### Taking photos (friends)
+
+Friends send **two photos** only (face + full body). Share [`docs/friend-photo-guide.md`](../../docs/friend-photo-guide.md) and the oval overlay [`assets/guides/face-oval-overlay.png`](assets/guides/face-oval-overlay.png) (matches in-game `template` framing).
+
 ### Build + register (photo body)
 
-For each friend, put crops in `assets/sources/<slug>/v2_/` (files `*1*` … `*6*`), then from repo root:
+**Builder workflow:** two friend photos → [lasso part crops](../../docs/builder-part-crops.md) (`npm run lasso`) → CLI below. You can also place hand-cut crops in `assets/sources/<slug>/` (files `*1*` … `*6*`) without the lasso app.
+
+From repo root:
 
 ```bash
 npm run face-crop:avatar -- packages/character-creator/assets/sources/<slug>/v2_ \
@@ -27,7 +33,7 @@ npm run face-crop:avatar -- packages/character-creator/assets/sources/<slug>/v2_
 `--roster` upserts into `characters.json` (keeps existing **quotes** on rebuild). Output PNGs: `assets/built/<slug>/`.
 
 ```bash
-npm run preview   # http://localhost:5174 — Kelvin, Maanya, …
+npm run preview   # http://localhost:5174 — defaults to Steven (golden path)
 ```
 
 Optional: check **Show dev mocks** in preview for Alex / Jordan / Sam.
@@ -52,9 +58,11 @@ npm run verify:preview
 Example:
 
 ```bash
-npm run face-crop:avatar -- packages/character-creator/assets/sources/kelvin/v2_ \
-  --body photo --slug kelvin --name Kelvin --roster
+npm run face-crop:avatar -- packages/character-creator/assets/sources/steven/v2_ \
+  --body photo --slug steven --name Steven --roster
 ```
+
+See [builder-part-crops.md](../../docs/builder-part-crops.md) — Steven is the reference run for workflow and Electron midpoint.
 
 **Head framing** (`--framing`): `bbox` (default) or `template` — see below.
 

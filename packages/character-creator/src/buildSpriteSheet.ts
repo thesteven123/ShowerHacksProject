@@ -1,13 +1,22 @@
 import sharp from "sharp";
 import { DEFAULT_SPRITE_LAYOUT, type CharacterVibe } from "@tiny-menaces/shared";
 import {
+  ANKLE_OVERLAP,
   ARM_SLOT,
+  ELBOW_OVERLAP,
+  FOOT_SLOT,
+  FOREARM_SLOT,
+  HAND_SLOT,
   HEAD_SLOT,
   LEG_SLOT,
+  LEG_V3_SLOT,
   LEGS_Y,
   type ScaledBodyParts,
+  type ScaledBodyPartsV3,
   TORSO_SLOT,
   TORSO_Y,
+  UPPER_ARM_SLOT,
+  WRIST_OVERLAP,
 } from "./bodyPartSlots.js";
 import type { HeadFramingMode } from "./headFraming.js";
 import { faceOvalClipPathSvg } from "./styleFace.js";
@@ -66,12 +75,42 @@ function limbImage(png: Buffer, x: number, y: number, w: number, h: number): str
   return `<image href="${dataUri}" x="${x}" y="${y}" width="${w}" height="${h}" preserveAspectRatio="xMidYMid meet"/>`;
 }
 
+function isScaledBodyPartsV3(parts: ScaledBodyParts | ScaledBodyPartsV3): parts is ScaledBodyPartsV3 {
+  return "rightUpperArm" in parts;
+}
+
+function armChainSvg(
+  upper: Buffer,
+  fore: Buffer,
+  hand: Buffer,
+  x: number,
+  baseY: number,
+  dy: number,
+): string {
+  const y0 = baseY + dy;
+  const yFore = y0 + UPPER_ARM_SLOT.height - ELBOW_OVERLAP;
+  const yHand = yFore + FOREARM_SLOT.height - WRIST_OVERLAP;
+  return [
+    limbImage(upper, x, y0, UPPER_ARM_SLOT.width, UPPER_ARM_SLOT.height),
+    limbImage(fore, x, yFore, FOREARM_SLOT.width, FOREARM_SLOT.height),
+    limbImage(hand, x, yHand, HAND_SLOT.width, HAND_SLOT.height),
+  ].join("\n      ");
+}
+
+function legChainSvg(leg: Buffer, foot: Buffer, x: number, legsY: number): string {
+  const footY = legsY + LEG_V3_SLOT.height - ANKLE_OVERLAP;
+  return [
+    limbImage(leg, x, legsY, LEG_V3_SLOT.width, LEG_V3_SLOT.height),
+    limbImage(foot, x, footY, FOOT_SLOT.width, FOOT_SLOT.height),
+  ].join("\n      ");
+}
+
 function frameSvg(
   styledFacePng: Buffer,
   index: number,
   vibe: CharacterVibe,
   headFraming: HeadFramingMode,
-  bodyParts?: ScaledBodyParts,
+  bodyParts?: ScaledBodyParts | ScaledBodyPartsV3,
 ): Buffer {
   const { dx, dy, legSpread, headScale, leftArmDy, rightArmDy } = frameOffsets(index);
   const { torso: torsoFill, limb: limbFill } = VIBE_BODY[vibe];
@@ -109,23 +148,57 @@ function frameSvg(
   const torsoW = TORSO_SLOT.width;
   const torsoH = TORSO_SLOT.height;
 
-  // Facing camera: character's right side is on the viewer's left (leftArmX / leftLegX).
-  const leftArm =
-    bodyParts != null
-      ? limbImage(bodyParts.rightArm, leftArmX, armY + leftArmDy, armW, armH)
-      : limbRect(leftArmX, armY + leftArmDy, armW, armH, limbFill);
-  const rightArm =
-    bodyParts != null
-      ? limbImage(bodyParts.leftArm, rightArmX, armY + rightArmDy, armW, armH)
-      : limbRect(rightArmX, armY + rightArmDy, armW, armH, limbFill);
-  const leftLeg =
-    bodyParts != null
-      ? limbImage(bodyParts.rightLeg, leftLegX, legsY, legW, legH)
-      : limbRect(leftLegX, legsY, legW, legH, limbFill);
-  const rightLeg =
-    bodyParts != null
-      ? limbImage(bodyParts.leftLeg, rightLegX, legsY, legW, legH)
-      : limbRect(rightLegX, legsY, legW, legH, limbFill);
+  let backLayers: string;
+  let frontArmLayer: string;
+
+  if (bodyParts != null && isScaledBodyPartsV3(bodyParts)) {
+    const charRightArmX = torsoX - UPPER_ARM_SLOT.width + 4;
+    const charLeftArmX = torsoX + TORSO_SLOT.width - 4;
+    const charRightLegX = cx - LEG_V3_SLOT.width - 2 + legSpread;
+    const charLeftLegX = cx + 2 + legSpread;
+
+    backLayers = [
+      armChainSvg(
+        bodyParts.rightUpperArm,
+        bodyParts.rightForearm,
+        bodyParts.rightHand,
+        charRightArmX,
+        armY,
+        leftArmDy,
+      ),
+      legChainSvg(bodyParts.rightLeg, bodyParts.rightFoot, charRightLegX, legsY),
+      legChainSvg(bodyParts.leftLeg, bodyParts.leftFoot, charLeftLegX, legsY),
+    ].join("\n      ");
+
+    frontArmLayer = armChainSvg(
+      bodyParts.leftUpperArm,
+      bodyParts.leftForearm,
+      bodyParts.leftHand,
+      charLeftArmX,
+      armY,
+      rightArmDy,
+    );
+  } else {
+    const leftArm =
+      bodyParts != null
+        ? limbImage(bodyParts.rightArm, leftArmX, armY + leftArmDy, armW, armH)
+        : limbRect(leftArmX, armY + leftArmDy, armW, armH, limbFill);
+    const rightArm =
+      bodyParts != null
+        ? limbImage(bodyParts.leftArm, rightArmX, armY + rightArmDy, armW, armH)
+        : limbRect(rightArmX, armY + rightArmDy, armW, armH, limbFill);
+    const leftLeg =
+      bodyParts != null
+        ? limbImage(bodyParts.rightLeg, leftLegX, legsY, legW, legH)
+        : limbRect(leftLegX, legsY, legW, legH, limbFill);
+    const rightLeg =
+      bodyParts != null
+        ? limbImage(bodyParts.leftLeg, rightLegX, legsY, legW, legH)
+        : limbRect(rightLegX, legsY, legW, legH, limbFill);
+    backLayers = [leftArm, leftLeg, rightLeg].join("\n      ");
+    frontArmLayer = rightArm;
+  }
+
   const torso =
     bodyParts != null
       ? limbImage(bodyParts.torso, torsoX, torsoY, torsoW, torsoH)
@@ -133,11 +206,9 @@ function frameSvg(
 
   return Buffer.from(
     `<svg width="${frameWidth}" height="${frameHeight}" xmlns="http://www.w3.org/2000/svg">
-      ${leftArm}
-      ${leftLeg}
-      ${rightLeg}
+      ${backLayers}
       ${torso}
-      ${rightArm}
+      ${frontArmLayer}
       <g transform="translate(${headX}, ${headY})">
         ${headImage}
       </g>
@@ -150,7 +221,7 @@ export async function buildSpriteSheet(
   styledFacePng: Buffer,
   vibe: CharacterVibe = "chaotic",
   headFraming: HeadFramingMode = "template",
-  bodyParts?: ScaledBodyParts,
+  bodyParts?: ScaledBodyParts | ScaledBodyPartsV3,
 ): Promise<Buffer> {
   const frames: Buffer[] = [];
   for (let i = 0; i < frameCount; i++) {

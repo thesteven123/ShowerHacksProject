@@ -16,7 +16,8 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "generate:mocks": "tsx scripts/generate-mock-assets.ts"
+    "generate:mocks": "tsx scripts/generate-mock-assets.ts",
+    "generate:face-overlay": "tsx scripts/generate-face-oval-overlay.ts"
   },
   "dependencies": {
     "@tiny-menaces/shared": "0.0.1",
