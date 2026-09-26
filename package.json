@@ -9,7 +9,7 @@
     "build": "npm run clean && tsc -p tsconfig.json && tsc -p tsconfig.game.json && node scripts/copy-ui.cjs",
     "start": "npm run build && electron .",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.game.json",
-    "test": "npm run build && node --test tests/game.test.cjs",
+    "test": "npm run build && node --test tests/*.test.cjs",
     "preview": "npm run build && node scripts/preview.cjs"
   },
   "devDependencies": {

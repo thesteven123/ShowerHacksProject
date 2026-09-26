@@ -8,6 +8,7 @@ import {
   contains,
 } from "../game-browser/game/index.js";
 import { mockFriends } from "../game-browser/shared/mockFriends.js";
+import { createLivingWorld } from "./living-world.js";
 
 const $ = (id) => document.getElementById(id);
 const bridge = window.tinyMenaces;
@@ -27,6 +28,7 @@ let engine,
 let lastSave = 0,
   resizePending = true,
   saveKey;
+let livingWorld;
 const arena = $("arena"),
   target = $("target");
 
@@ -43,6 +45,8 @@ function say(text) {
 function save() {
   try {
     localStorage.setItem(saveKey, JSON.stringify(engine.exportSave()));
+    if (livingWorld)
+      localStorage.setItem(`tiny-menaces:world:v1:${saveKey}`, JSON.stringify(livingWorld.world.exportSave()));
   } catch {
     /* Storage is optional; the game remains playable. */
   }
@@ -79,6 +83,7 @@ function editor(personality) {
 }
 function setMode(enabled) {
   engine.setInteractive(enabled);
+  if (livingWorld && !enabled) livingWorld.world.setPaused(false);
   document.body.classList.toggle("quiet", !enabled);
   $("mode-status").textContent = enabled
     ? "INTERACTIVE · MAKE SOME TROUBLE"
@@ -176,6 +181,7 @@ function render() {
     playing = !!state.round;
   document.body.classList.toggle("playing", playing);
   document.body.classList.toggle("result-visible", !!state.result);
+  livingWorld?.visible(!playing && !state.result);
   document.body.classList.toggle(
     "urgent",
     playing && state.round.remainingMs <= 5000,
@@ -236,7 +242,7 @@ function render() {
   }
   const entity = state.round?.target || state.companion,
     layout = engine.layout;
-  target.hidden = !!state.result || entity.phase === "hidden";
+  target.hidden = (!playing && !!livingWorld) || !!state.result || entity.phase === "hidden";
   target.dataset.phase = entity.phase;
   target.dataset.clip = entity.clip;
   target.dataset.taunt = String(entity.taunting);
@@ -253,6 +259,13 @@ function render() {
   if (state.result && JSON.stringify(state.result) !== renderedResultKey) {
     resultView(state.result);
     renderedResultKey = JSON.stringify(state.result);
+  }
+  if (livingWorld && !playing && !state.result) {
+    const worldState = livingWorld.render();
+    $("world-count").textContent = `${worldState.actors.length} friends · ${worldState.props.length} virtual things`;
+    $("drop-ball").disabled = !state.interactive || worldState.props.length >= 12;
+    $("undo-prop").disabled = !state.interactive || worldState.props.length === 0;
+    $("clean-props").disabled = !state.interactive || worldState.props.length === 0;
   }
 }
 async function start() {
@@ -274,6 +287,19 @@ async function start() {
     /* Use fresh state if saved data is unavailable or invalid. */
   }
   editor(engine.snapshot().personality);
+  livingWorld = createLivingWorld({
+    friends,
+    bounds: { width: arena.clientWidth, height: arena.clientHeight },
+    personality: engine.snapshot().personality,
+    arena,
+    enabled: () => engine.snapshot().interactive,
+    notify: () => save(),
+  });
+  try {
+    const stored = localStorage.getItem(`tiny-menaces:world:v1:${saveKey}`);
+    if (stored) livingWorld.world.importSave(JSON.parse(stored));
+  } catch { /* The local simulation starts fresh if saved data is unavailable. */ }
+  livingWorld.world.setPersonality(friend.id, engine.snapshot().personality);
   engine.subscribe(handleEvent);
   $("friend-name").textContent = friend.name;
   const initials = friend.name
@@ -298,6 +324,7 @@ async function start() {
       PERSONALITY_KEYS.map((key) => [key, Number($(`trait-${key}`).value)]),
     );
     if (engine.setPersonality(values)) {
+      livingWorld.world.setPersonality(friend.id, values);
       save();
       toast("Personality saved. Same friend, their own kind of chaos.");
     }
@@ -308,8 +335,16 @@ async function start() {
       if (!outcome.accepted) toast(outcome.reason);
       render();
     });
+  $("undo-prop").addEventListener("click", () => { livingWorld.world.undoProp(); save(); render(); });
+  $("drop-ball").addEventListener("click", () => {
+    livingWorld.world.addProp("ball", { x: arena.clientWidth / 2, y: arena.clientHeight * 0.7 });
+    save();
+    render();
+  });
+  $("clean-props").addEventListener("click", () => { livingWorld.world.cleanDesktop(); save(); render(); });
   function begin() {
     if (engine.startRound("aim-challenge", $("difficulty").value)) {
+      livingWorld.world.setPaused(true);
       speechUntil = 0;
       render();
       resizePending = true;
@@ -319,11 +354,13 @@ async function start() {
   $("again").addEventListener("click", begin);
   $("stop").addEventListener("click", () => {
     engine.abortRound();
+    livingWorld.world.setPaused(false);
     render();
     resizePending = true;
   });
   $("back").addEventListener("click", () => {
     engine.dismissResult();
+    livingWorld.world.setPaused(false);
     render();
   });
   function pointFor(event) {
@@ -344,6 +381,7 @@ async function start() {
       point = pointFor(event);
     if (snapshot.round) engine.shoot(point);
     else if (
+      !livingWorld &&
       !snapshot.result &&
       contains(point, hitboxFor(snapshot.companion, engine.layout))
     )
@@ -365,6 +403,7 @@ async function start() {
   // Explicit adapter for the future sprite contract; do not assume its URL field name.
   window.tinyMenacesGame = {
     system: engine,
+    world: livingWorld.world,
     async setSprite(sheetUrl) {
       const image = new Image();
       image.src = sheetUrl;
@@ -392,9 +431,11 @@ async function start() {
         width: arena.clientWidth,
         height: arena.clientHeight,
       });
+      livingWorld.world.setBounds({ width: arena.clientWidth, height: arena.clientHeight });
       resizePending = false;
     }
     engine.tick();
+    livingWorld.world.tick(now);
     render();
     if (now >= noticeUntil) $("notice").hidden = true;
     if (now >= hitUntil) $("hit-effect").hidden = true;

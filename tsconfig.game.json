@@ -8,5 +8,5 @@
     "declaration": true,
     "types": []
   },
-  "include": ["src/game/**/*.ts", "src/shared/**/*.ts"]
+  "include": ["src/game/**/*.ts", "src/simulation/**/*.ts", "src/shared/**/*.ts"]
 }
