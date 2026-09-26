@@ -48,7 +48,8 @@ function syncRosterUI() {
     opt.textContent = c.name;
     rosterSelect.appendChild(opt);
   }
-  const current = characters[0];
+  const current = characters.find((c) => c.id === "steven") ?? characters[0];
+  rosterSelect.value = current?.id ?? "";
   if (!current) {
     statusEl.textContent = "No characters in roster — run face-crop:avatar with --roster";
     return;
