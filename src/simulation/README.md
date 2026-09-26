@@ -15,11 +15,14 @@ iteration, but `npm start` is the desktop deliverable.
   simulation changes positions, relationships, and virtual props.
 - Close friends can meet and exchange a short offline dialogue. Relationships
   are directional, and proximity hysteresis plus a cooldown prevent repeated
-  encounters. Dragging interrupts the current activity immediately; releasing
-  a friend produces a reply. All visible dialogue works without network access.
+  encounters. One scene is shown at a time and its bubbles disappear after
+  3.2 seconds. Actors resume their activities afterward. Dragging interrupts
+  the current activity immediately; releasing a friend produces a reply. The
+  offline lines rotate rather than repeating the same greeting.
 - Props exist only inside the app overlay. The UI can drop a ball, undo the
-  latest virtual prop, or clear all props. There is a 12-prop cap; no desktop
-  file is created, moved, or deleted.
+  latest virtual prop, or clear all props. Automatic prank notes disappear
+  after 20 seconds and are not saved. There is a 12-prop cap; no desktop file
+  is created, moved, or deleted.
 - The world pauses during Aim Challenge and resumes afterward. Saves are
   validated and stored locally with normalized positions so display resizing
   does not break the layout. A suspended computer does not cause hours of
@@ -58,15 +61,24 @@ matching friend, which Person 4 can use for reactions. Use `Ctrl/⌘ + Shift + M
 to open the other controls. The renderer pauses the world
 while a minigame is active.
 
+The world owns ambient companion dialogue. The first friend's separate
+`GameSystem` no longer adds its own autonomous greetings on top of world
+conversations; its player-triggered Pet/Bark/67 lines remain available and
+disappear after 2.6 seconds.
+
 `WorldEvent` reports activities, interruptions, scenes, and prop changes.
 `WorldSnapshot` is a cloned read model; the UI should not mutate it. A scene
 contains only dialogue from its participants. The local simulation creates a
 reply immediately. `SceneDirector` optionally accepts **one shared**
 `SceneProvider(scene, abortSignal)` for alternative dialogue. It permits one
-request in flight, at most two requests per simulation minute, a 5-second
+request in flight, at most two requests per simulation minute, a 2.5-second
 abort, and only short validated replies from known speakers. A reply to a scene
-that has since changed is discarded. No provider, API key, or cloud endpoint is
-configured in this branch, so offline dialogue is always available.
+that has since changed is discarded. Pass a `SceneDirector` to
+`createLivingWorld({ director, ... })` when connecting a provider. For a future
+Featherless integration, keep the API key in Electron's main process and expose
+only a narrow scene-request function through preload; the renderer should never
+hold the key. No provider, API key, or cloud endpoint is configured in this
+branch, so offline dialogue is always available.
 
 Person 1 can keep the world in the existing Electron renderer and expose a
 secure main-process bridge if a remote provider is later added. Person 2 can

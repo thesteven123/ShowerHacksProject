@@ -29,6 +29,7 @@ let lastSave = 0,
   resizePending = true,
   saveKey;
 let livingWorld;
+let pendingAction = null;
 const arena = $("arena"),
   target = $("target");
 
@@ -126,7 +127,10 @@ function handleEvent(event) {
           ? "can't catch me. +5 if you can."
           : "a little break. don't you dare.",
     };
-    say(reactions[event.behavior] || event.behavior);
+    // The multi-friend world owns autonomous companion dialogue. Keep only
+    // player-triggered actions from the single-target game system here.
+    if (!livingWorld || current.round || event.behavior === pendingAction)
+      say(reactions[event.behavior] || event.behavior);
   } else if (event.type === "levelUp")
     toast(
       `Level ${event.level}! ${event.unlocked.length ? `Unlocked: ${event.unlocked.join(", ")}` : "Your friendship has history."}`,
@@ -339,7 +343,9 @@ async function start() {
   });
   for (const action of ["pet", "bark", "say67"])
     $(action).addEventListener("click", () => {
+      pendingAction = action;
       const outcome = engine.perform(action);
+      pendingAction = null;
       if (!outcome.accepted) toast(outcome.reason);
       render();
     });

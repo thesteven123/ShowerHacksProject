@@ -9,6 +9,8 @@ const MAX_PROPS = 12;
 const ENTER_DISTANCE = 105;
 const LEAVE_DISTANCE = 155;
 const ENCOUNTER_COOLDOWN = 60_000;
+const SCENE_COOLDOWN = 12_000;
+const AUTO_PROP_LIFETIME = 20_000;
 const BODY_MARGIN = 42;
 
 type WorldOptions = {
@@ -51,7 +53,9 @@ export class DesktopWorld {
   private nextSceneId = 1;
   private nextPropId = 1;
   private scene: WorldSnapshot["scene"] = null;
+  private sceneParticipants: string[] = [];
   private sceneEndsAt = 0;
+  private lastSceneAt = -Infinity;
   private dragging: string | null = null;
   private paused = false;
 
@@ -93,12 +97,7 @@ export class DesktopWorld {
   }
   setPaused(paused: boolean): void {
     this.paused = paused; this.lastTickMs = null; this.remainderMs = 0;
-    if (paused) {
-      this.scene = null;
-      for (const actor of this.actors) if (actor.activity === "talk") {
-        actor.activity = "idle"; actor.activityVersion++;
-      }
-    }
+    if (paused) this.finishScene();
   }
   setPersonality(actorId: string, personality: Personality): boolean {
     const actor = this.actors.find(item => item.id === actorId);
@@ -117,7 +116,10 @@ export class DesktopWorld {
   }
   private step(delta: number): void {
     this.elapsedMs += delta;
-    if (this.scene && this.elapsedMs >= this.sceneEndsAt) this.scene = null;
+    if (this.scene && this.elapsedMs >= this.sceneEndsAt) this.finishScene();
+    const beforeCleanup = this.props.length;
+    this.props = this.props.filter(prop => prop.createdBy === "user" || this.elapsedMs - prop.createdAt < AUTO_PROP_LIFETIME);
+    if (this.props.length !== beforeCleanup) this.emit({ type: "propsChanged", count: this.props.length });
     for (const actor of this.actors) {
       actor.needs.energy = clamp(actor.needs.energy + (actor.activity === "rest" ? 0.8 : -0.09), 0, 100);
       actor.needs.boredom = clamp(actor.needs.boredom + (actor.activity === "read" || actor.activity === "play" ? -0.6 : 0.14), 0, 100);
@@ -175,8 +177,24 @@ export class DesktopWorld {
       this.beginScene("encounter", [a, b]);
     }
   }
+  private finishScene(): void {
+    if (!this.scene) return;
+    this.scene = null;
+    this.sceneEndsAt = 0;
+    for (const id of this.sceneParticipants) {
+      const actor = this.actors.find(item => item.id === id);
+      if (actor?.activity === "talk") {
+        actor.activity = "idle";
+        actor.activityVersion++;
+        this.decisionAt.set(actor.id, this.elapsedMs + 400);
+      }
+    }
+    this.sceneParticipants = [];
+  }
   private beginScene(kind: SceneInput["kind"], participants: Actor[]): void {
-    if (this.scene && kind === "encounter") return;
+    if (kind !== "drag_release" && (this.scene || this.elapsedMs - this.lastSceneAt < SCENE_COOLDOWN)) return;
+    this.finishScene();
+    this.lastSceneAt = this.elapsedMs;
     const sceneId = `scene-${this.nextSceneId++}`;
     if (kind === "encounter") for (const actor of participants) { actor.activity = "talk"; actor.activityVersion++; actor.reservations = []; this.activityEndsAt.set(actor.id, this.elapsedMs + 2800); }
     const input: SceneInput = {
@@ -186,6 +204,7 @@ export class DesktopWorld {
     };
     const fallback = offlineScene(input);
     this.scene = { id: sceneId, kind, lines: fallback.lines };
+    this.sceneParticipants = participants.map(actor => actor.id);
     this.sceneEndsAt = this.elapsedMs + 3200;
     this.applyIntent(kind, participants);
     this.emit({ type: "scene", sceneId, kind, output: fallback });
@@ -194,6 +213,7 @@ export class DesktopWorld {
     void this.director.suggest(input, this.elapsedMs, current).then((output: SceneOutput | null) => {
       if (!output || !current()) return;
       this.scene = { id: sceneId, kind, lines: output.lines };
+      this.sceneEndsAt = this.elapsedMs + 3200;
       this.emit({ type: "scene", sceneId, kind, output });
     });
   }
@@ -219,7 +239,7 @@ export class DesktopWorld {
     actor.reservations = [];
     actor.activity = "dragged";
     this.dragging = actorId;
-    if (this.scene && this.scene.lines.some(line => line.speakerId === actorId)) this.scene = null;
+    if (this.scene && this.sceneParticipants.includes(actorId)) this.finishScene();
     this.emit({ type: "interrupted", actorId, previous });
     return true;
   }
@@ -266,7 +286,7 @@ export class DesktopWorld {
       version: 1,
       actors: this.actors.map(actor => ({ id: actor.id, personality: actor.personality, needs: actor.needs, mood: actor.mood, xRatio: actor.position.x / this.bounds.width, yRatio: actor.position.y / this.bounds.height })),
       relationships: [...this.relationships.values()].map(relation => ({ ...relation, lastEncounterAt: Number.isFinite(relation.lastEncounterAt) ? relation.lastEncounterAt : -1 })),
-      props: this.props.map(prop => ({ id: prop.id, type: prop.type, xRatio: prop.position.x / this.bounds.width, yRatio: prop.position.y / this.bounds.height, createdAt: prop.createdAt, createdBy: prop.createdBy })),
+      props: this.props.filter(prop => prop.createdBy === "user").map(prop => ({ id: prop.id, type: prop.type, xRatio: prop.position.x / this.bounds.width, yRatio: prop.position.y / this.bounds.height, createdAt: prop.createdAt, createdBy: prop.createdBy })),
     };
   }
   importSave(input: unknown): boolean {
@@ -294,7 +314,7 @@ export class DesktopWorld {
     }
     // Saved simulation milliseconds cannot be compared with a fresh session clock.
     this.relationships = new Map(save.relationships.map(relation => [`${relation.fromId}->${relation.toId}`, { ...relation, lastEncounterAt: -Infinity }]));
-    this.props = save.props.map(prop => ({ id: prop.id, type: prop.type, position: this.confined({ x: prop.xRatio * this.bounds.width, y: prop.yRatio * this.bounds.height }), createdAt: prop.createdAt, createdBy: prop.createdBy }));
+    this.props = save.props.filter(prop => prop.createdBy === "user").map(prop => ({ id: prop.id, type: prop.type, position: this.confined({ x: prop.xRatio * this.bounds.width, y: prop.yRatio * this.bounds.height }), createdAt: prop.createdAt, createdBy: prop.createdBy }));
     this.nextPropId = Math.max(0, ...this.props.map(prop => Number(prop.id.replace("prop-", "")) || 0)) + 1;
     return true;
   }

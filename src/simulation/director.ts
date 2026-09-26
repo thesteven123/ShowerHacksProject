@@ -19,10 +19,10 @@ export class SceneDirector {
     this.requestTimes.push(nowMs);
     this.inFlight = true;
     const abort = new AbortController();
-    const timeout = setTimeout(() => abort.abort(), 5_000);
+    const timeout = setTimeout(() => abort.abort(), 2_500);
     try {
       const raw = await this.provider(scene, abort.signal);
-      return stillCurrent() ? validateSceneOutput(raw, scene) : null;
+      return !abort.signal.aborted && stillCurrent() ? validateSceneOutput(raw, scene) : null;
     } catch { return null; }
     finally { clearTimeout(timeout); this.inFlight = false; }
   }
@@ -42,15 +42,22 @@ export function offlineScene(scene: SceneInput): SceneOutput {
   const [first, second] = scene.actors;
   if (scene.kind === "drag_release") return {
     intent: "complain", lines: [
-      { speakerId: first.id, text: "Hey! I was in the middle of something." },
-      ...(second ? [{ speakerId: second.id, text: "Hi! Want to play instead?" }] : []),
+      { speakerId: first.id, text: first.vibe === "dramatic" ? "A dramatic entrance would have been nice." : first.vibe === "supportive" ? "Okay! Where are we going?" : "I was plotting something. Now you've moved me." },
+      ...(second ? [{ speakerId: second.id, text: "You two going somewhere?" }] : []),
     ],
   };
   if (scene.kind === "prop_prank") return {
     intent: "tease", lines: [{ speakerId: first.id, text: "I decorated your desktop. You're welcome." }],
   };
+  const encounterLines = [
+    [`What are you plotting, ${second?.name ?? "friend"}?`, "Absolutely nothing. Probably."],
+    ["Race you across the desktop?", "You're on."],
+    ["You look suspiciously cheerful.", "I found the good snacks."],
+  ];
+  const sequence = Number(scene.sceneId.match(/\d+$/)?.[0] ?? 1);
+  const [opening, reply] = encounterLines[(sequence - 1) % encounterLines.length];
   return { intent: "invite", lines: [
-    { speakerId: first.id, text: `Hey, ${second?.name ?? "friend"}!` },
-    ...(second ? [{ speakerId: second.id, text: "Hi! Want to play?" }] : []),
+    { speakerId: first.id, text: opening },
+    ...(second ? [{ speakerId: second.id, text: reply }] : []),
   ] };
 }

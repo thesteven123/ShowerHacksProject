@@ -1,6 +1,6 @@
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
-const { DesktopWorld, SceneDirector, validateSceneOutput } = require("../dist/simulation/index.js");
+const { DesktopWorld, SceneDirector, offlineScene, validateSceneOutput } = require("../dist/simulation/index.js");
 const { mockFriends } = require("../dist/shared/mockFriends.js");
 
 function fixture({ director } = {}) {
@@ -64,6 +64,28 @@ test("encounter avoids duplicate A/B and B/A scenes and tracks directed relation
   assert.ok(pairs.some(relation => relation.fromId === b.id && relation.toId === a.id));
 });
 
+test("encounter dialogue expires and friends resume autonomous activities", () => {
+  const world = new DesktopWorld({ friends: mockFriends.slice(0, 2), bounds: { width: 180, height: 200 }, random: () => 0.5 });
+  world.tick(0);
+  for (let now = 100; now <= 200; now += 100) world.tick(now);
+  assert.equal(world.snapshot().scene?.kind, "encounter");
+  assert.ok(world.snapshot().actors.every(actor => actor.activity === "talk"));
+  for (let now = 300; now <= 5000; now += 100) world.tick(now);
+  assert.equal(world.snapshot().scene, null);
+  assert.ok(world.snapshot().actors.every(actor => actor.activity !== "talk"));
+});
+
+test("offline dialogue varies instead of repeating one greeting", () => {
+  const scene = {
+    kind: "encounter",
+    actors: [{ id: "a", name: "Alex", vibe: "chaotic", mood: "okay" }, { id: "b", name: "Blair", vibe: "dramatic", mood: "okay" }],
+    allowedIntents: ["greet", "tease", "invite"],
+  };
+  const lines = [1, 2, 3].map(number => offlineScene({ ...scene, sceneId: `scene-${number}` }).lines[0].text);
+  assert.equal(new Set(lines).size, 3);
+  assert.ok(lines.every(line => !line.startsWith("Hey")));
+});
+
 test("virtual mess is bounded and can be undone or cleaned", () => {
   const f = fixture();
   for (let i = 0; i < 20; i++) f.world.addProp("note", { x: 300 + i, y: 350 });
@@ -74,6 +96,17 @@ test("virtual mess is bounded and can be undone or cleaned", () => {
   f.world.cleanDesktop();
   assert.equal(f.world.snapshot().props.length, 0);
   assert.equal(f.world.undoProp(), false);
+});
+
+test("automatic prank notes expire and do not survive a restart", () => {
+  const friend = mockFriends[2];
+  const world = new DesktopWorld({ friends: [friend], bounds: { width: 900, height: 600 }, random: () => 0.5 });
+  world.addProp("note", { x: 300, y: 350 }, friend.id);
+  world.addProp("ball", { x: 450, y: 350 });
+  assert.deepEqual(world.exportSave().props.map(prop => prop.type), ["ball"]);
+  world.tick(0);
+  for (let now = 100; now <= 21000; now += 100) world.tick(now);
+  assert.deepEqual(world.snapshot().props.map(prop => prop.type), ["ball"]);
 });
 
 test("save restores normalized positions and rejects malformed records", () => {

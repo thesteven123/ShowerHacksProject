@@ -1,9 +1,9 @@
 import { DesktopWorld } from "../game-browser/simulation/index.js";
 
 /** DOM adapter for the local simulation. OS/window input stays in Electron. */
-export function createLivingWorld({ friends, bounds, personality, arena, enabled, notify, onRegions, onDragging }) {
+export function createLivingWorld({ friends, bounds, personality, arena, enabled, notify, onRegions, onDragging, director }) {
   const personalities = { [friends[0].id]: personality };
-  const world = new DesktopWorld({ friends, bounds, personalities });
+  const world = new DesktopWorld({ friends, bounds, personalities, director });
   const layer = document.createElement("div");
   layer.id = "living-world";
   layer.hidden = true;
@@ -13,6 +13,7 @@ export function createLivingWorld({ friends, bounds, personality, arena, enabled
   arena.append(layer);
   const actors = new Map();
   const props = new Map();
+  const directSpeech = new Map();
   let dragging = null;
   let lastRegionUpdate = -Infinity;
 
@@ -77,11 +78,13 @@ export function createLivingWorld({ friends, bounds, personality, arena, enabled
   friends.forEach(makeActor);
 
   world.subscribe(event => {
-    if (event.type === "scene") notify(event);
+    if (event.type === "scene") {
+      directSpeech.clear();
+      notify(event);
+    }
     if (event.type === "propAdded" || event.type === "propsChanged") render();
   });
 
-  const directSpeech = new Map();
   function speak(actorId, text, durationMs = 2600) {
     if (!actors.has(actorId) || typeof text !== "string" || !text.trim()) return false;
     directSpeech.set(actorId, { text: text.slice(0, 120), until: performance.now() + durationMs });
@@ -113,7 +116,7 @@ export function createLivingWorld({ friends, bounds, personality, arena, enabled
         node = document.createElement("div");
         node.className = `world-prop world-prop-${prop.type}`;
         node.setAttribute("aria-label", `virtual ${prop.type}`);
-        node.textContent = prop.type === "note" ? "HEY!" : prop.type === "paper" ? "◌" : "●";
+        node.textContent = prop.type === "note" ? "✦" : prop.type === "paper" ? "◌" : "●";
         propLayer.append(node); props.set(prop.id, node);
       }
       node.style.left = `${prop.position.x}px`;
