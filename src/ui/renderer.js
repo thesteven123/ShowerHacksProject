@@ -8,6 +8,7 @@ import {
   contains,
 } from "../game-browser/game/index.js";
 import { mockFriends } from "../game-browser/shared/mockFriends.js";
+import { applyLimbs, doesSixSeven, figureMarkup } from "./figure.js";
 import { createLivingWorld } from "./living-world.js";
 
 const $ = (id) => document.getElementById(id);
@@ -343,33 +344,10 @@ async function start() {
   $("friend-avatar").textContent = initials;
   const targetArt = target.querySelector(".placeholder-art");
   if (targetArt) {
-    targetArt.innerHTML = `
-      <div class="figure" aria-hidden="true">
-        <div class="head"><span class="eye left"></span><span class="eye right"></span><span class="mouth"></span></div>
-        <div class="torso">
-          <span class="arm left"><span class="elbow"></span><span class="forearm"><span class="hand"></span></span></span>
-          <span class="arm right"><span class="elbow"></span><span class="forearm"><span class="hand"></span></span></span>
-        </div>
-        <div class="legs">
-          <span class="leg left"><span class="foot"></span></span>
-          <span class="leg right"><span class="foot"></span></span>
-        </div>
-      </div>
-    `;
+    targetArt.innerHTML = figureMarkup();
     targetArt.classList.add("roaming", `vibe-${friend.vibe}`);
-    if (friend.id === "maanya") targetArt.classList.add("antic-six-seven");
-    const applyPhoto = (node, url) => {
-      if (!node || !url) return;
-      node.style.backgroundImage = `url("${url}")`;
-      node.classList.add("has-photo");
-    };
-    const limbs = friend.limbs;
-    applyPhoto(targetArt.querySelector(".head"), limbs?.head || friend.imageUrl);
-    applyPhoto(targetArt.querySelector(".torso"), limbs?.torso);
-    applyPhoto(targetArt.querySelector(".arm.left"), limbs?.armLeft);
-    applyPhoto(targetArt.querySelector(".arm.right"), limbs?.armRight);
-    applyPhoto(targetArt.querySelector(".leg.left"), limbs?.legLeft);
-    applyPhoto(targetArt.querySelector(".leg.right"), limbs?.legRight);
+    if (doesSixSeven(friend)) targetArt.classList.add("antic-six-seven");
+    applyLimbs(targetArt, friend);
   }
   target.setAttribute("aria-label", `${friend.name}, your desktop friend`);
   $("mode-toggle").hidden = !!bridge;

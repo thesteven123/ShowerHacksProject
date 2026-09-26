@@ -1,4 +1,5 @@
 import { DesktopWorld } from "../game-browser/simulation/index.js";
+import { applyLimbs, doesSixSeven, figureMarkup } from "./figure.js";
 
 /** DOM adapter for the local simulation. OS/window input stays in Electron. */
 export function createLivingWorld({ friends, bounds, personality, arena, enabled, notify, onRegions, onDragging, director }) {
@@ -21,59 +22,13 @@ export function createLivingWorld({ friends, bounds, personality, arena, enabled
     const rect = arena.getBoundingClientRect();
     return { x: event.clientX - rect.left - arena.clientLeft, y: event.clientY - rect.top - arena.clientTop };
   };
-  function figureMarkup() {
-    return `
-      <div class="figure" aria-hidden="true">
-        <div class="head">
-          <span class="eye left"></span>
-          <span class="eye right"></span>
-          <span class="mouth"></span>
-        </div>
-        <div class="torso">
-          <span class="arm left">
-            <span class="elbow"></span>
-            <span class="forearm"><span class="hand"></span></span>
-          </span>
-          <span class="arm right">
-            <span class="elbow"></span>
-            <span class="forearm"><span class="hand"></span></span>
-          </span>
-        </div>
-        <div class="legs">
-          <span class="leg left"><span class="foot"></span></span>
-          <span class="leg right"><span class="foot"></span></span>
-        </div>
-      </div>
-    `;
-  }
-
-  function applyPhoto(node, url) {
-    if (!node || !url) return;
-    node.style.backgroundImage = `url("${url}")`;
-    node.classList.add("has-photo");
-  }
-
-  function applyLimbs(root, friend) {
-    const limbs = friend.limbs;
-    if (!limbs) {
-      applyPhoto(root.querySelector(".head"), friend.imageUrl);
-      return;
-    }
-    applyPhoto(root.querySelector(".head"), limbs.head);
-    applyPhoto(root.querySelector(".torso"), limbs.torso);
-    applyPhoto(root.querySelector(".arm.left"), limbs.armLeft);
-    applyPhoto(root.querySelector(".arm.right"), limbs.armRight);
-    applyPhoto(root.querySelector(".leg.left"), limbs.legLeft);
-    applyPhoto(root.querySelector(".leg.right"), limbs.legRight);
-  }
-
   function makeActor(friend) {
     const node = document.createElement("div");
     node.className = `world-friend gremlin roaming vibe-${friend.vibe}`;
     node.dataset.actorId = friend.id;
     node.setAttribute("role", "img");
     node.setAttribute("aria-label", `${friend.name}, desktop friend`);
-    if (friend.id === "maanya") node.classList.add("antic-six-seven");
+    if (doesSixSeven(friend)) node.classList.add("antic-six-seven");
     node.innerHTML = figureMarkup();
     applyLimbs(node, friend);
     const bubble = document.createElement("div");

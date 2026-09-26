@@ -7,6 +7,7 @@ import type { CharacterLimbs, CharacterSpriteSpec, FriendCharacter, Vibe } from 
 type RosterJson = FriendCharacter[];
 
 const STUB_QUOTES = new Set(["…", "...", "Hey!", "I'm back!", "Ready when you are."]);
+const ROSTER_ORDER = ["maanya", "kelvin", "philip", "steven"];
 
 const VIBE_BY_ID: Record<string, Vibe> = {
   maanya: "chaotic",
@@ -31,6 +32,10 @@ function rosterPath(): string {
   return path.join(repoRoot(), "packages/character-creator/data/characters.json");
 }
 
+function baseId(id: string): string {
+  return id.replace(/-v3$/, "");
+}
+
 function toUiUrl(assetPath: string): string {
   return assetPath.replace(/^\//, "./");
 }
@@ -53,15 +58,30 @@ function portraitUrl(id: string, imageUrl: string): string {
 }
 
 function attachLimbs(id: string): CharacterLimbs | undefined {
-  const limbs: CharacterLimbs = {
-    head: limbUrl(id, "2-portrait-64.png") ?? portraitUrl(id, ""),
-    torso: limbUrl(id, "2-torso-slot.png"),
-    // Camera-facing: character's right side is the viewer's left.
-    armLeft: limbUrl(id, "3-right-arm-slot.png"),
-    armRight: limbUrl(id, "4-left-arm-slot.png"),
-    legLeft: limbUrl(id, "5-right-leg-slot.png"),
-    legRight: limbUrl(id, "6-left-leg-slot.png"),
-  };
+  const isV3 = Boolean(limbUrl(id, "3-right-upper-arm-slot.png"));
+  const limbs: CharacterLimbs = isV3
+    ? {
+        head: limbUrl(id, "2-portrait-64.png") ?? portraitUrl(id, ""),
+        torso: limbUrl(id, "2-torso-slot.png"),
+        armLeft: limbUrl(id, "3-right-upper-arm-slot.png"),
+        forearmLeft: limbUrl(id, "4-right-forearm-slot.png"),
+        handLeft: limbUrl(id, "5-right-hand-slot.png"),
+        armRight: limbUrl(id, "6-left-upper-arm-slot.png"),
+        forearmRight: limbUrl(id, "7-left-forearm-slot.png"),
+        handRight: limbUrl(id, "8-left-hand-slot.png"),
+        legLeft: limbUrl(id, "9-right-leg-slot.png"),
+        footLeft: limbUrl(id, "10-right-foot-slot.png"),
+        legRight: limbUrl(id, "11-left-leg-slot.png"),
+        footRight: limbUrl(id, "12-left-foot-slot.png"),
+      }
+    : {
+        head: limbUrl(id, "2-portrait-64.png") ?? portraitUrl(id, ""),
+        torso: limbUrl(id, "2-torso-slot.png"),
+        armLeft: limbUrl(id, "3-right-arm-slot.png"),
+        armRight: limbUrl(id, "4-left-arm-slot.png"),
+        legLeft: limbUrl(id, "5-right-leg-slot.png"),
+        legRight: limbUrl(id, "6-left-leg-slot.png"),
+      };
   return limbs.head || limbs.torso ? limbs : undefined;
 }
 
@@ -79,8 +99,9 @@ function realQuotes(lines: string[]): string[] {
 }
 
 function enrich(character: FriendCharacter): FriendCharacter {
-  const vibe = VIBE_BY_ID[character.id] ?? character.vibe;
-  const extras = EXTRA_QUOTES[character.id] ?? vibeFallbacks[vibe];
+  const person = baseId(character.id);
+  const vibe = VIBE_BY_ID[person] ?? character.vibe;
+  const extras = EXTRA_QUOTES[person] ?? vibeFallbacks[vibe];
   return {
     ...character,
     vibe,
@@ -95,6 +116,18 @@ function enrich(character: FriendCharacter): FriendCharacter {
   };
 }
 
+function preferLatestBodies(characters: FriendCharacter[]): FriendCharacter[] {
+  const byPerson = new Map<string, FriendCharacter>();
+  for (const character of characters) {
+    const person = baseId(character.id);
+    const current = byPerson.get(person);
+    if (!current || character.id.endsWith("-v3")) byPerson.set(person, character);
+  }
+  return ROSTER_ORDER.map((person) => byPerson.get(person)).filter(
+    (character): character is FriendCharacter => Boolean(character),
+  );
+}
+
 export function loadRoster(): FriendCharacter[] {
   const file = rosterPath();
   if (!existsSync(file)) return mockFriends;
@@ -102,7 +135,7 @@ export function loadRoster(): FriendCharacter[] {
   try {
     const parsed = JSON.parse(readFileSync(file, "utf8")) as RosterJson;
     if (!Array.isArray(parsed) || parsed.length === 0) return mockFriends;
-    return parsed.map(enrich);
+    return preferLatestBodies(parsed.map(enrich));
   } catch (error) {
     console.warn("Could not load Person 2 roster, using mock friends.", error);
     return mockFriends;

@@ -32,14 +32,20 @@ export type CharacterSpriteSpec = {
   animations: CharacterAnimations;
 };
 
-/** Photo limb crops for the overlay CSS figure (Person 2 pipeline slots). */
+/** Photo limb crops for the overlay CSS figure (Person 2 v2/v3 pipeline slots). */
 export type CharacterLimbs = {
   head?: string;
   torso?: string;
   armLeft?: string;
   armRight?: string;
+  forearmLeft?: string;
+  forearmRight?: string;
+  handLeft?: string;
+  handRight?: string;
   legLeft?: string;
   legRight?: string;
+  footLeft?: string;
+  footRight?: string;
 };
 
 export type FriendCharacter = {
