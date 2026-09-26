@@ -1,5 +1,6 @@
 import sharp from "sharp";
 import type { CharacterVibe } from "@tiny-menaces/shared";
+import { fitSubjectInSquare, type HeadFramingMode } from "./headFraming.js";
 
 const VIBE_TINT: Record<CharacterVibe, { r: number; g: number; b: number }> = {
   chaotic: { r: 255, g: 120, b: 180 },
@@ -31,14 +32,42 @@ function faceOutlineSvg(size: number): string {
   </svg>`;
 }
 
-/** Applies vibe tint, oval alpha cutout, and a soft outline — no square photo frame. */
+export type StyleFaceOptions = {
+  resizeFit?: "cover" | "contain";
+  /** template (A) = fixed oval mask; bbox (B) = keep cutout shape, no oval */
+  headFraming?: HeadFramingMode;
+};
+
+/** Applies vibe tint; template mode adds oval alpha cutout + outline. */
 export async function styleFace(
   facePng: Buffer,
   vibe: CharacterVibe,
   outSize = 64,
+  resizeFitOrOptions: "cover" | "contain" | StyleFaceOptions = "cover",
 ): Promise<Buffer> {
+  const opts: StyleFaceOptions =
+    resizeFitOrOptions === "cover" || resizeFitOrOptions === "contain"
+      ? { resizeFit: resizeFitOrOptions, headFraming: "template" }
+      : { resizeFit: "cover", headFraming: "template", ...resizeFitOrOptions };
+
+  const resizeFit = opts.resizeFit ?? "cover";
+  const headFraming = opts.headFraming ?? "template";
+
   const tint = VIBE_TINT[vibe];
-  const resized = await sharp(facePng).resize(outSize, outSize, { fit: "cover" }).png().toBuffer();
+
+  let resized: Buffer;
+  if (headFraming === "bbox") {
+    const fitted = await fitSubjectInSquare(facePng, outSize);
+    resized = fitted.buffer;
+  } else {
+    resized = await sharp(facePng)
+      .resize(outSize, outSize, {
+        fit: resizeFit,
+        background: { r: 0, g: 0, b: 0, alpha: 0 },
+      })
+      .png()
+      .toBuffer();
+  }
 
   const tinted = await sharp(resized)
     .composite([
@@ -51,6 +80,14 @@ export async function styleFace(
     ])
     .png()
     .toBuffer();
+
+  if (headFraming === "bbox") {
+    return sharp(tinted)
+      .ensureAlpha()
+      .composite([{ input: resized, blend: "dest-in" }])
+      .png()
+      .toBuffer();
+  }
 
   const mask = await sharp(Buffer.from(faceMaskSvg(outSize))).ensureAlpha().png().toBuffer();
   const cutout = await sharp(tinted)

@@ -104,12 +104,12 @@ If the core game works with **placeholder characters** first (doc’s rule), you
 - [x] Preview app — `npm run preview` → http://localhost:5174 (same asset URLs as handoff doc).
 - [x] Photo pipeline smoke-tested (e.g. Phil via `npm run create:character`).
 - [x] Gremlin art pass — visible body/arms, oval face cutout (not square photo frame).
+- [x] **Person 3 sign-off:** Hitbox, anchor, frame clips, and `sprite-handoff-person3.md` contract approved for game renderer.
 
 ### Next — you (Person 2)
 
-- [ ] **Person 3 sign-off (15 min):** Send them preview link or `sprite-handoff-person3.md`; confirm hitbox/anchor/clip indices work for their renderer (or adjust `DEFAULT_SPRITE_LAYOUT` once).
 - [ ] **Document roster workflow:** Either add `--add-to-roster` on `create:character` or a short note that custom chars must be appended to `assets/mockCharacters.json` (regenerating mocks wipes manual entries).
-- [ ] **Commit & push `character-creator` branch** so Person 1/3/5 can depend on packages (much of `packages/` / `apps/` may still be untracked locally).
+- [ ] **Push `character-creator` branch** so Person 1/3/5 can depend on packages (`158498a` initial sprites commit is local until pushed).
 - [ ] **Optional polish:** Better default quotes; tighter face crop when you add face detection; keep `fio-face.png` out of git if photos should stay local.
 
 ### Next — with Person 1 (Electron midpoint)

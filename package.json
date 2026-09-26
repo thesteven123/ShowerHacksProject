@@ -17,6 +17,8 @@
     "preview": "npm run dev -w @tiny-menaces/character-preview",
     "generate:mocks": "npm run build:creator && npm run generate:mocks -w @tiny-menaces/character-creator",
     "create:character": "npm run build:creator && tsx packages/character-creator/scripts/create-from-photo.ts",
+    "create:from-face-crop": "npm run build:creator && tsx packages/character-creator/scripts/create-from-face-crop.ts",
+    "face-crop:avatar": "npm run build:creator && tsx packages/character-creator/scripts/face-crop-to-avatar.ts",
     "smoke:character": "npm run build:creator && tsx packages/character-creator/scripts/smoke-create-character.ts",
     "verify:preview": "tsx scripts/verify-preview-assets.ts"
   },

@@ -1,6 +1,6 @@
 # Sprite handoff (Person 2 → Person 3)
 
-Proposed v0 contract for rendering and hit detection. **Person 3:** comment in PR or `#integration` if anything blocks your renderer.
+Proposed v0 contract for rendering and hit detection. **Person 3 signed off** on anchor, hitbox, and clip layout (2026-09-26).
 
 ## Type
 

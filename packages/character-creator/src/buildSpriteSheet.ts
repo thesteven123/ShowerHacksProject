@@ -1,5 +1,6 @@
 import sharp from "sharp";
 import { DEFAULT_SPRITE_LAYOUT, type CharacterVibe } from "@tiny-menaces/shared";
+import type { HeadFramingMode } from "./headFraming.js";
 import { faceOvalClipPathSvg } from "./styleFace.js";
 
 const { frameWidth, frameHeight, frameCount } = DEFAULT_SPRITE_LAYOUT;
@@ -66,14 +67,36 @@ function limbRect(x: number, y: number, w: number, h: number, fill: string, rx =
   return `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${rx}" fill="${fill}" stroke="${BODY_STROKE}" stroke-width="2"/>`;
 }
 
-function frameSvg(styledFacePng: Buffer, index: number, vibe: CharacterVibe): Buffer {
-  const { dx, dy, legSpread, headScale, leftArmDy, rightArmDy } = frameOffsets(index);
+type FrameLayout = {
+  headSize: number;
+  headX: number;
+  headY: number;
+};
+
+function frameLayout(index: number): FrameLayout & ReturnType<typeof frameOffsets> {
+  const offsets = frameOffsets(index);
+  const { dx, dy, headScale } = offsets;
+  const cx = frameWidth / 2 + dx;
+  const headSize = HEAD_SIZE * headScale;
+  return {
+    ...offsets,
+    headSize,
+    headX: cx - headSize / 2,
+    headY: dy,
+  };
+}
+
+function frameSvg(
+  styledFacePng: Buffer,
+  index: number,
+  vibe: CharacterVibe,
+  headFraming: HeadFramingMode,
+  embedHead: boolean,
+): Buffer {
+  const { dx, dy, legSpread, leftArmDy, rightArmDy, headSize, headX, headY } = frameLayout(index);
   const { torso: torsoFill, limb: limbFill } = VIBE_BODY[vibe];
   const cx = frameWidth / 2 + dx;
   const torsoX = cx - TORSO_W / 2;
-  const headSize = HEAD_SIZE * headScale;
-  const headX = cx - headSize / 2;
-  const headY = dy;
   const torsoY = TORSO_Y + dy;
   const legsY = LEGS_Y + dy;
   const leftLegX = cx - LEG_W - 2 + legSpread;
@@ -81,10 +104,23 @@ function frameSvg(styledFacePng: Buffer, index: number, vibe: CharacterVibe): Bu
   const leftArmX = torsoX - ARM_W + 4;
   const rightArmX = torsoX + TORSO_W - 4;
   const armY = torsoY + 6;
-  const faceDataUri = `data:image/png;base64,${styledFacePng.toString("base64")}`;
 
-  const faceClip = faceOvalClipPathSvg(headSize);
-  const clipId = `faceClip${index}`;
+  let headMarkup = "";
+  if (embedHead) {
+    const faceDataUri = `data:image/png;base64,${styledFacePng.toString("base64")}`;
+    const faceClip = faceOvalClipPathSvg(headSize);
+    const clipId = `faceClip${index}`;
+    const headImage =
+      headFraming === "bbox"
+        ? `<image href="${faceDataUri}" x="0" y="0" width="${headSize}" height="${headSize}" preserveAspectRatio="xMidYMid meet"/>`
+        : `<defs>
+            <clipPath id="${clipId}">
+              ${faceClip}
+            </clipPath>
+          </defs>
+          <image href="${faceDataUri}" x="0" y="0" width="${headSize}" height="${headSize}" preserveAspectRatio="xMidYMid slice" clip-path="url(#${clipId})"/>`;
+    headMarkup = `<g transform="translate(${headX}, ${headY})">${headImage}</g>`;
+  }
 
   return Buffer.from(
     `<svg width="${frameWidth}" height="${frameHeight}" xmlns="http://www.w3.org/2000/svg">
@@ -93,24 +129,51 @@ function frameSvg(styledFacePng: Buffer, index: number, vibe: CharacterVibe): Bu
       ${limbRect(rightLegX, legsY, LEG_W, LEG_H, limbFill)}
       ${limbRect(torsoX, torsoY, TORSO_W, TORSO_H, torsoFill, 5)}
       ${limbRect(rightArmX, armY + rightArmDy, ARM_W, ARM_H, limbFill)}
-      <g transform="translate(${headX}, ${headY})">
-        <defs>
-          <clipPath id="${clipId}">
-            ${faceClip}
-          </clipPath>
-        </defs>
-        <image href="${faceDataUri}" x="0" y="0" width="${headSize}" height="${headSize}" preserveAspectRatio="xMidYMid slice" clip-path="url(#${clipId})"/>
-      </g>
+      ${headMarkup}
     </svg>`,
   );
 }
 
+/** librsvg (sharp SVG) drops PNG alpha on embedded data URIs — composite the head in PNG space. */
+async function compositeBboxHead(bodyFrame: Buffer, styledFacePng: Buffer, layout: FrameLayout): Promise<Buffer> {
+  const slot = Math.max(1, Math.round(layout.headSize));
+  const headImage = await sharp(styledFacePng)
+    .resize(slot, slot, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } })
+    .png()
+    .toBuffer();
+
+  const meta = await sharp(headImage).metadata();
+  const fw = meta.width ?? slot;
+  const fh = meta.height ?? slot;
+  const left = Math.round(layout.headX + (slot - fw) / 2);
+  const top = Math.round(layout.headY + (slot - fh) / 2);
+
+  return sharp(bodyFrame).composite([{ input: headImage, left, top }]).png().toBuffer();
+}
+
+async function renderFrame(
+  styledFacePng: Buffer,
+  index: number,
+  vibe: CharacterVibe,
+  headFraming: HeadFramingMode,
+): Promise<Buffer> {
+  if (headFraming === "bbox") {
+    const layout = frameLayout(index);
+    const body = await sharp(frameSvg(styledFacePng, index, vibe, headFraming, false)).png().toBuffer();
+    return compositeBboxHead(body, styledFacePng, layout);
+  }
+  return sharp(frameSvg(styledFacePng, index, vibe, headFraming, true)).png().toBuffer();
+}
+
 /** Builds a horizontal PNG sprite sheet from a styled face portrait. */
-export async function buildSpriteSheet(styledFacePng: Buffer, vibe: CharacterVibe = "chaotic"): Promise<Buffer> {
+export async function buildSpriteSheet(
+  styledFacePng: Buffer,
+  vibe: CharacterVibe = "chaotic",
+  headFraming: HeadFramingMode = "template",
+): Promise<Buffer> {
   const frames: Buffer[] = [];
   for (let i = 0; i < frameCount; i++) {
-    const frame = await sharp(frameSvg(styledFacePng, i, vibe)).png().toBuffer();
-    frames.push(frame);
+    frames.push(await renderFrame(styledFacePng, i, vibe, headFraming));
   }
 
   const sheet = sharp({

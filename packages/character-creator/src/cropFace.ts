@@ -32,3 +32,19 @@ export async function cropFace(input: Buffer, size = 256): Promise<FaceCropResul
 
   return { buffer, width: size, height: size };
 }
+
+/**
+ * Pre-cropped face: scale the full image into a square canvas (no center extract).
+ * Letterboxing uses a transparent background so framing stays deterministic.
+ */
+export async function scaleFaceCrop(input: Buffer, size = 256): Promise<FaceCropResult> {
+  const buffer = await sharp(input)
+    .resize(size, size, {
+      fit: "contain",
+      background: { r: 0, g: 0, b: 0, alpha: 0 },
+    })
+    .png()
+    .toBuffer();
+
+  return { buffer, width: size, height: size };
+}
