@@ -15,7 +15,7 @@ npm start
 ```
 
 - `Ctrl+Shift+M` / `⌘+Shift+M`: switch between passive pet and interactive mode.
-  Passive mode shows the pet and lets mouse clicks pass through to the desktop.
+  Passive mode keeps the desktop usable while allowing you to drag a pet directly.
 - In interactive mode, drag a friend to interrupt their activity and trigger
   dialogue, drop a virtual ball, undo or clear virtual props, pet the first
   friend, edit four personality scores, or start the Aim Challenge. During a

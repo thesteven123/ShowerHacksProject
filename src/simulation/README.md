@@ -52,7 +52,10 @@ unsubscribe();
 The UI adapter is `src/ui/living-world.js`. It exposes the world as
 `window.tinyMenacesGame.world` for integration and testing. Coordinates and
 props are relative to `#arena`. Electron's passive mode remains click-through;
-use `Ctrl/⌘ + Shift + M` to enable drag controls. The renderer pauses the world
+the area around each visible friend accepts dragging even in passive mode.
+`window.tinyMenacesGame.speak(actorId, text)` displays a short line above the
+matching friend, which Person 4 can use for reactions. Use `Ctrl/⌘ + Shift + M`
+to open the other controls. The renderer pauses the world
 while a minigame is active.
 
 `WorldEvent` reports activities, interruptions, scenes, and prop changes.

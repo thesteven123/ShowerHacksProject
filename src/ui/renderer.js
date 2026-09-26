@@ -38,6 +38,12 @@ function toast(text) {
   noticeUntil = performance.now() + 3200;
 }
 function say(text) {
+  if (livingWorld && engine && !engine.snapshot().round) {
+    livingWorld.speak(engine.snapshot().character.id, text);
+    speechUntil = 0;
+    $("speech").hidden = true;
+    return;
+  }
   $("speech").textContent = text;
   $("speech").hidden = false;
   speechUntil = performance.now() + 2600;
@@ -255,7 +261,7 @@ function render() {
     `${Math.max(8, Math.min(arena.clientWidth - 228, entity.x - 50))}px`;
   $("speech").style.top =
     `${Math.max(12, entity.y - layout.anchor.y * entity.scale - 58)}px`;
-  $("speech").hidden = performance.now() >= speechUntil || !!state.result;
+  $("speech").hidden = !playing || performance.now() >= speechUntil || !!state.result;
   if (state.result && JSON.stringify(state.result) !== renderedResultKey) {
     resultView(state.result);
     renderedResultKey = JSON.stringify(state.result);
@@ -292,8 +298,10 @@ async function start() {
     bounds: { width: arena.clientWidth, height: arena.clientHeight },
     personality: engine.snapshot().personality,
     arena,
-    enabled: () => engine.snapshot().interactive,
+    enabled: () => engine.snapshot().interactive || !!bridge,
     notify: () => save(),
+    onRegions: bridge?.setPetRegions,
+    onDragging: bridge?.setPetDragging,
   });
   try {
     const stored = localStorage.getItem(`tiny-menaces:world:v1:${saveKey}`);
@@ -404,6 +412,7 @@ async function start() {
   window.tinyMenacesGame = {
     system: engine,
     world: livingWorld.world,
+    speak: (actorId, text) => livingWorld.speak(actorId, text),
     async setSprite(sheetUrl) {
       const image = new Image();
       image.src = sheetUrl;
