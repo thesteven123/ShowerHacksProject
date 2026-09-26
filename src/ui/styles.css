@@ -55,6 +55,10 @@ body.game-mode #mode-status {
   transform: translate(-50%, -50%);
 }
 
+body.game-mode .gremlin {
+  cursor: pointer;
+}
+
 .gremlin.vibe-chaotic {
   --skin: #ff7a59;
 }
@@ -81,8 +85,22 @@ body.game-mode #mode-status {
   height: 72px;
   border-radius: 50%;
   background: #f4d2b0;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
   box-shadow: inset 0 -8px 0 #e3b48d;
   z-index: 2;
+  overflow: hidden;
+}
+
+.head.has-photo {
+  box-shadow: none;
+  background-color: transparent;
+}
+
+.head.has-photo .eye,
+.head.has-photo .mouth {
+  display: none;
 }
 
 .eye {
@@ -122,6 +140,19 @@ body.game-mode #mode-status {
   margin-left: -14px;
   border-radius: 12px 12px 10px 10px;
   background: var(--skin);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.torso.has-photo,
+.arm.has-photo,
+.leg.has-photo {
+  background-color: transparent;
+}
+
+.arm.has-photo .elbow {
+  display: none;
 }
 
 .arm {
@@ -131,6 +162,9 @@ body.game-mode #mode-status {
   height: 18px;
   border-radius: 8px;
   background: var(--skin);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
   transform-origin: top center;
   z-index: 3;
 }
@@ -203,6 +237,9 @@ body.game-mode #mode-status {
   height: 34px;
   border-radius: 8px;
   background: var(--skin);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
   transform-origin: top center;
 }
 
@@ -390,6 +427,141 @@ body.game-mode #mode-status {
   }
   50% {
     transform: rotate(-64deg);
+  }
+}
+
+.gremlin.is-down {
+  pointer-events: none;
+}
+
+.gremlin.is-down .figure {
+  animation: none !important;
+  transform: translateY(28px) scale(0.12);
+  opacity: 0;
+  transition: transform 0.28s ease, opacity 0.28s ease;
+}
+
+.gremlin.is-respawning .figure {
+  animation: fx-pop 0.45s ease !important;
+}
+
+.gremlin.effect-shake .figure {
+  animation: fx-shake 0.4s ease-in-out !important;
+}
+
+.gremlin.effect-flash .figure {
+  animation: fx-flash 0.45s ease !important;
+}
+
+.gremlin.effect-sparkle .figure {
+  animation: fx-sparkle 0.55s ease !important;
+}
+
+.gremlin.effect-wobble .figure {
+  animation: fx-wobble 0.55s ease-in-out !important;
+}
+
+.gremlin.effect-pop .figure,
+.gremlin.effect-pop.antic-six-seven .figure {
+  animation: fx-pop 0.45s ease !important;
+}
+
+.gremlin.effect-dramatic-zoom .figure {
+  animation: fx-zoom 0.6s ease !important;
+}
+
+.gremlin.effect-hearts .figure::after,
+.gremlin.effect-skull .figure::after,
+.gremlin.effect-sparkle .figure::after {
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 18px;
+  line-height: 1;
+  pointer-events: none;
+  animation: fx-float 0.7s ease-out;
+}
+
+.gremlin.effect-hearts .figure::after {
+  content: "♥";
+  color: #ff4d6d;
+}
+
+.gremlin.effect-skull .figure::after {
+  content: "☠";
+}
+
+.gremlin.effect-sparkle .figure::after {
+  content: "✦";
+  color: #ffd56f;
+}
+
+@keyframes fx-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-8px) rotate(-4deg);
+  }
+  75% {
+    transform: translateX(8px) rotate(4deg);
+  }
+}
+
+@keyframes fx-flash {
+  0%,
+  100% {
+    filter: brightness(1);
+  }
+  40% {
+    filter: brightness(2.1);
+  }
+}
+
+@keyframes fx-sparkle {
+  50% {
+    filter: brightness(1.35) saturate(1.3);
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes fx-wobble {
+  25% {
+    transform: rotate(-10deg);
+  }
+  75% {
+    transform: rotate(10deg);
+  }
+}
+
+@keyframes fx-pop {
+  0% {
+    transform: scale(0.2);
+  }
+  70% {
+    transform: scale(1.12);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes fx-zoom {
+  50% {
+    transform: scale(1.18);
+  }
+}
+
+@keyframes fx-float {
+  from {
+    opacity: 1;
+    transform: translate(-50%, 8px);
+  }
+  to {
+    opacity: 0;
+    transform: translate(-50%, -16px);
   }
 }
 

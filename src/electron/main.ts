@@ -1,7 +1,13 @@
 import { app, BrowserWindow, globalShortcut, ipcMain, screen } from "electron";
 import { existsSync } from "node:fs";
 import path from "node:path";
-import { mockFriends } from "../shared/mockFriends";
+import { getReactionById } from "../reactions";
+import { loadRoster } from "../shared/roster";
+import type { GameEventType } from "../shared/types";
+
+const friends = loadRoster();
+
+const REACTION_EVENTS = new Set<GameEventType>(["idle", "hit", "respawn"]);
 
 const MODE_HOTKEY = "CommandOrControl+Shift+M";
 const QUIT_HOTKEY = "CommandOrControl+Shift+Q";
@@ -73,8 +79,12 @@ function createWindow(): void {
 }
 
 app.whenReady().then(() => {
-  ipcMain.handle("friends:list", () => mockFriends);
+  ipcMain.handle("friends:list", () => friends);
   ipcMain.handle("mode:get", () => gameMode);
+  ipcMain.handle("reactions:get", (_event, characterId: string, event: string) => {
+    if (!REACTION_EVENTS.has(event as GameEventType)) return null;
+    return getReactionById(friends, characterId, event as GameEventType);
+  });
 
   const openOverlay = (): void => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
