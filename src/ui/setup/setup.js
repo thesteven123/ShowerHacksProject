@@ -15,7 +15,24 @@
   let photo = null;
   let currentStep = 'photo';
   let photoRevision = 0;
-  let friends = [];
+  function crewMember(id, name, personality) {
+    const base = `../built/${id}`;
+    return {
+      id,
+      name,
+      builtIn: true,
+      personality: { ...personality },
+      photo: { url: `${base}/${id}-portrait.png`, name: `${name}.png`, sample: false, file: null },
+      bodyUrl: `${base}/pipeline/1-scaled-256.png`,
+      appearance: { type: 'photo', hue: 0 },
+    };
+  }
+  let friends = [
+    crewMember('maanya-v3', 'Maanya', presets.wildcard),
+    crewMember('kelvin-v3', 'Kelvin', presets.sweetheart),
+    crewMember('philip-v3', 'Philip', { chaos: 4, brainrot: 3, competitive: 7, friendliness: 6 }),
+    crewMember('steven-v3', 'Steven', presets.tryhard),
+  ];
   let editingId = null;
   let deletingId = null;
   let editPersonality = null;
@@ -193,19 +210,39 @@
       })),
     }));
   }
+  function paintLook(stage, friend) {
+    stage.classList.add('photo-crew');
+    stage.replaceChildren();
+    const face = document.createElement('img');
+    face.className = 'crew-face';
+    face.alt = `${friend.name}'s face`;
+    face.src = friend.photo.url;
+    const body = document.createElement('img');
+    body.className = 'crew-body';
+    body.alt = '';
+    body.src = friend.bodyUrl;
+    stage.append(face, body);
+  }
   function renderRoster() {
     $('roster-count').textContent = friends.length;
-    $('roster-summary').textContent = `${friends.length} ${friends.length === 1 ? 'friend' : 'friends'} in your crew · demo characters`;
+    $('roster-summary').textContent = `${friends.length} friends in your crew · Maanya, Kelvin, Philip, and Steven`;
     show('roster-empty', !friends.length);
     $('roster-grid').replaceChildren();
     for (const friend of friends) {
       const card = document.createElement('article');
       card.className = 'friend-card';
-      card.innerHTML = '<div class="friend-card-header"><span class="source-tag">UI DRAFT</span><button class="icon-button remove-draft" aria-label="Remove draft"><svg class="icon"><use href="#i-trash"/></svg></button></div><div class="friend-stage"><img style="max-width:90%;height:90%;object-fit:contain;position:relative;border-radius:10px"/></div><div class="friend-details"><h2></h2><p>Source image · not generated</p><div class="trait-chips"></div><button class="button secondary full-width edit-draft">Edit details ↗</button></div>';
+      card.innerHTML = '<div class="friend-card-header"><span class="source-tag">UI DRAFT</span><button class="icon-button remove-draft" aria-label="Remove draft"><svg class="icon"><use href="#i-trash"/></svg></button></div><div class="friend-stage"></div><div class="friend-details"><h2></h2><p>Source image · not generated</p><div class="trait-chips"></div><button class="button secondary full-width edit-draft">Edit details ↗</button></div>';
       card.querySelector('h2').textContent = friend.name;
-      card.querySelector('.source-tag').textContent = 'DEMO CHARACTER';
-      card.querySelector('.friend-details p').textContent = 'Demo appearance · no backend';
-      mountDemo(card.querySelector('.friend-stage'), friend.appearance);
+      if (friend.builtIn) {
+        card.querySelector('.source-tag').textContent = 'YOUR CREW';
+        card.querySelector('.friend-details p').textContent = 'Photo face and body';
+        paintLook(card.querySelector('.friend-stage'), friend);
+        card.querySelector('.remove-draft').hidden = true;
+      } else {
+        card.querySelector('.source-tag').textContent = 'DEMO CHARACTER';
+        card.querySelector('.friend-details p').textContent = 'Demo appearance · no backend';
+        mountDemo(card.querySelector('.friend-stage'), friend.appearance);
+      }
       traits.forEach(([key, label]) => {
         const chip = document.createElement('span');
         chip.textContent = `${label} ${friend.personality[key]}`;
@@ -330,4 +367,5 @@
   refreshTraits();
   updatePreview();
   renderRoster();
+  view('roster');
 })();

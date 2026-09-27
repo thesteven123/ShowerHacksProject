@@ -37,17 +37,17 @@
 </a>
 <p class="sidebar-label">YOUR LITTLE UNIVERSE</p>
 <nav>
-<button aria-current="page" class="nav-item selected" id="nav-create"><svg class="icon"><use href="#i-plus"></use></svg>Create a friend<svg class="icon nav-arrow"><use href="#i-arrow"></use></svg></button>
-<button class="nav-item" id="nav-roster"><svg class="icon"><use href="#i-crew"></use></svg>Your friends<span class="count-pill" id="roster-count">0</span></button>
-<button class="nav-item" disabled="" id="nav-desktop">Desktop · coming later</button>
+<button class="nav-item" id="nav-create"><svg class="icon"><use href="#i-plus"></use></svg>Create a friend<svg class="icon nav-arrow"><use href="#i-arrow"></use></svg></button>
+<button aria-current="page" class="nav-item selected" id="nav-roster"><svg class="icon"><use href="#i-crew"></use></svg>Your friends<span class="count-pill" id="roster-count">4</span></button>
+<a class="nav-item" id="nav-desktop" href="../index.html">Continue</a>
 </nav>
 <div class="sidebar-note"><span aria-hidden="true" class="little-star">✳</span><p>Same friends.<br/>Less personal space.</p><span>Now living rent-free<br/>on your desktop.</span></div>
 <div class="sidebar-bottom"><span class="local-dot"></span><span id="runtime-label">Desktop setup UI</span><span class="version">V.01</span></div>
 </aside>
 <main class="main-content" id="main-content" tabindex="-1">
-<header class="page-top"><p>CHARACTER SETUP / FRONTEND PREVIEW</p><button class="plain-button" id="help-button"><svg class="icon"><use href="#i-help"></use></svg>How it works</button></header>
+<header class="page-top"><p>CHARACTER SETUP / FRONTEND PREVIEW</p><div class="page-actions"><a class="button primary" href="../index.html">Continue</a><button class="plain-button" id="help-button"><svg class="icon"><use href="#i-help"></use></svg>How it works</button></div></header>
 <div class="banner warning" hidden="" id="storage-warning" role="alert"></div>
-<section aria-labelledby="create-title" id="create-view">
+<section aria-labelledby="create-title" hidden="" id="create-view">
 <div class="hero"><div><p class="eyebrow"><span class="tiny-dot"></span> A FRIEND. BUT FUN-SIZED.</p><h1 id="create-title">Real friends.<br/><span>Tiny problems.</span></h1><p class="hero-copy">Turn a photo into a little desktop companion.<br/>All their personality. A fraction of the size.</p></div><div aria-hidden="true" class="hero-stamp"><svg class="icon"><use href="#i-spark"></use></svg><span>100% FRIEND<br/>0% CHILL</span></div></div>
 <div class="creator-grid">
 <div class="creation-panel">
@@ -98,11 +98,16 @@
 </div>
 <p class="privacy-note">Demo mode · Your file stays in this window. Character appearances are simulated. Reloading clears this demo.</p>
 </section>
-<section aria-labelledby="roster-title" hidden="" id="roster-view">
-<div class="hero roster-hero"><div><p class="eyebrow"><span class="tiny-dot"></span> GOOD COMPANY. BAD INFLUENCE.</p><h1 id="roster-title" tabindex="-1">Your tiny<br/><span>inner circle.</span></h1><p class="hero-copy">Review names, photos, and personality settings before integration.</p></div><button class="button primary" id="roster-add"><svg class="icon"><use href="#i-plus"></use></svg>Create a friend</button></div>
-<div class="roster-toolbar"><p id="roster-summary">0 friends in your crew</p></div>
-<div class="roster-empty" id="roster-empty"><span class="empty-crew-icon"><svg class="icon"><use href="#i-crew"></use></svg></span><h2>It's a little too quiet in here.</h2><p>Start with one friend. Add the rest of the group chat later.</p><button class="button primary" id="empty-create">Make your first friend<svg class="icon"><use href="#i-plus"></use></svg></button><button class="text-button" id="empty-examples">Or try a sample setup</button></div>
-<div class="roster-grid" id="roster-grid"></div>
+<section aria-labelledby="roster-title" id="roster-view">
+<div class="hero roster-hero"><div><p class="eyebrow"><span class="tiny-dot"></span> GOOD COMPANY. BAD INFLUENCE.</p><h1 id="roster-title" tabindex="-1">Your tiny<br/><span>inner circle.</span></h1><p class="hero-copy">Maanya, Kelvin, Philip, and Steven are already here. Continue just opens the desktop look.</p></div><button class="button primary" id="roster-add"><svg class="icon"><use href="#i-plus"></use></svg>Create a friend</button></div>
+<div class="roster-toolbar"><p id="roster-summary">4 friends in your crew · Maanya, Kelvin, Philip, and Steven</p></div>
+<div class="roster-empty" hidden="" id="roster-empty"><span class="empty-crew-icon"><svg class="icon"><use href="#i-crew"></use></svg></span><h2>It's a little too quiet in here.</h2><p>Start with one friend. Add the rest of the group chat later.</p><button class="button primary" id="empty-create">Make your first friend<svg class="icon"><use href="#i-plus"></use></svg></button><button class="text-button" id="empty-examples">Or try a sample setup</button></div>
+<div class="roster-grid" id="roster-grid">
+<article class="friend-card"><div class="friend-card-header"><span class="source-tag">YOUR CREW</span></div><div class="friend-stage photo-crew"><img alt="Maanya's face" class="crew-face" src="../built/maanya-v3/maanya-v3-portrait.png"/><img alt="" class="crew-body" src="../built/maanya-v3/pipeline/1-scaled-256.png"/></div><div class="friend-details"><h2>Maanya</h2><p>Photo face and body</p></div></article>
+<article class="friend-card"><div class="friend-card-header"><span class="source-tag">YOUR CREW</span></div><div class="friend-stage photo-crew"><img alt="Kelvin's face" class="crew-face" src="../built/kelvin-v3/kelvin-v3-portrait.png"/><img alt="" class="crew-body" src="../built/kelvin-v3/pipeline/1-scaled-256.png"/></div><div class="friend-details"><h2>Kelvin</h2><p>Photo face and body</p></div></article>
+<article class="friend-card"><div class="friend-card-header"><span class="source-tag">YOUR CREW</span></div><div class="friend-stage photo-crew"><img alt="Philip's face" class="crew-face" src="../built/philip-v3/philip-v3-portrait.png"/><img alt="" class="crew-body" src="../built/philip-v3/pipeline/1-scaled-256.png"/></div><div class="friend-details"><h2>Philip</h2><p>Photo face and body</p></div></article>
+<article class="friend-card"><div class="friend-card-header"><span class="source-tag">YOUR CREW</span></div><div class="friend-stage photo-crew"><img alt="Steven's face" class="crew-face" src="../built/steven-v3/steven-v3-portrait.png"/><img alt="" class="crew-body" src="../built/steven-v3/pipeline/1-scaled-256.png"/></div><div class="friend-details"><h2>Steven</h2><p>Photo face and body</p></div></article>
+</div>
 <p class="privacy-note">Demo characters · Example appearances, not photo-generated. Reloading clears this demo.</p>
 </section>
 <footer class="studio-footer"><span>SMALL FRIEND. BIG PERSONALITY.</span><span>Made for your desktop, not your productivity. <i>↗</i></span></footer>
