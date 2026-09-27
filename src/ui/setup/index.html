@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; connect-src 'none'; base-uri 'none'; form-action 'none'"/>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1" name="viewport"/>
+<meta content="#191b19" name="theme-color"/>
+<title>Tiny Menaces — Character Setup UI</title>
+
+<link href="./studio.css" rel="stylesheet"/>
+</head>
+<body>
+<svg aria-hidden="true" class="icon-library" xmlns="http://www.w3.org/2000/svg"><defs>
+<symbol id="i-plus" viewbox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></symbol>
+<symbol id="i-arrow" viewbox="0 0 24 24"><path d="M4 12h15m-6-6 6 6-6 6"></path></symbol>
+<symbol id="i-back" viewbox="0 0 24 24"><path d="M20 12H5m6-6-6 6 6 6"></path></symbol>
+<symbol id="i-crew" viewbox="0 0 24 24"><circle cx="9" cy="8" r="3"></circle><path d="M3 20v-2a6 6 0 0 1 12 0v2M17 5a3 3 0 0 1 0 6m1 3a5 5 0 0 1 3 4v2"></path></symbol>
+<symbol id="i-desktop" viewbox="0 0 24 24"><rect height="13" rx="2" width="18" x="3" y="4"></rect><path d="M8 21h8m-4-4v4"></path></symbol>
+<symbol id="i-upload" viewbox="0 0 24 24"><path d="M12 15V3m-5 5 5-5 5 5M4 15v5a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-5"></path></symbol>
+<symbol id="i-image" viewbox="0 0 24 24"><rect height="18" rx="3" width="18" x="3" y="3"></rect><circle cx="8" cy="8" r="1.5"></circle><path d="m3 17 6-6 4 4 3-3 5 5"></path></symbol>
+<symbol id="i-check" viewbox="0 0 24 24"><path d="m5 12 4 4L19 6"></path></symbol>
+<symbol id="i-shuffle" viewbox="0 0 24 24"><path d="M3 6h3l12 12h3M3 18h3L18 6h3m-4-4 4 4-4 4m0 4 4 4-4 4"></path></symbol>
+<symbol id="i-close" viewbox="0 0 24 24"><path d="m6 6 12 12M6 18 18 6"></path></symbol>
+<symbol id="i-trash" viewbox="0 0 24 24"><path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7m4-7v7"></path></symbol>
+<symbol id="i-edit" viewbox="0 0 24 24"><path d="m14 5 5 5M4 20l5-1L21 7l-5-5L4 14v6Z"></path></symbol>
+<symbol id="i-shield" viewbox="0 0 24 24"><path d="m12 3 8 3v6c0 5-8 9-8 9s-8-4-8-9V6l8-3Z"></path><path d="m8 12 3 3 5-6"></path></symbol>
+<symbol id="i-spark" viewbox="0 0 24 24"><path d="m12 2 2.8 7.2L22 12l-7.2 2.8L12 22l-2.8-7.2L2 12l7.2-2.8L12 2Z"></path></symbol>
+<symbol id="i-help" viewbox="0 0 24 24"><circle cx="12" cy="12" r="9"></circle><path d="M9 9a3 3 0 0 1 6 0c0 2-3 2-3 4m0 3v.1"></path></symbol>
+</defs></svg>
+<a class="skip-link" href="#main-content">Skip to content</a>
+<div class="studio-shell">
+<aside aria-label="Main navigation" class="sidebar">
+<a aria-label="Tiny Menaces home" class="brand" href="./index.html">
+<span aria-hidden="true" class="brand-mark"><i></i><i></i></span>
+<span>tiny<br/>menaces<span class="brand-period">.</span></span>
+</a>
+<p class="sidebar-label">YOUR LITTLE UNIVERSE</p>
+<nav>
+<button aria-current="page" class="nav-item selected" id="nav-create"><svg class="icon"><use href="#i-plus"></use></svg>Create a friend<svg class="icon nav-arrow"><use href="#i-arrow"></use></svg></button>
+<button class="nav-item" id="nav-roster"><svg class="icon"><use href="#i-crew"></use></svg>Your friends<span class="count-pill" id="roster-count">0</span></button>
+<button class="nav-item" disabled="" id="nav-desktop">Desktop · coming later</button>
+</nav>
+<div class="sidebar-note"><span aria-hidden="true" class="little-star">✳</span><p>Same friends.<br/>Less personal space.</p><span>Now living rent-free<br/>on your desktop.</span></div>
+<div class="sidebar-bottom"><span class="local-dot"></span><span id="runtime-label">Desktop setup UI</span><span class="version">V.01</span></div>
+</aside>
+<main class="main-content" id="main-content" tabindex="-1">
+<header class="page-top"><p>CHARACTER SETUP / FRONTEND PREVIEW</p><button class="plain-button" id="help-button"><svg class="icon"><use href="#i-help"></use></svg>How it works</button></header>
+<div class="banner warning" hidden="" id="storage-warning" role="alert"></div>
+<section aria-labelledby="create-title" id="create-view">
+<div class="hero"><div><p class="eyebrow"><span class="tiny-dot"></span> A FRIEND. BUT FUN-SIZED.</p><h1 id="create-title">Real friends.<br/><span>Tiny problems.</span></h1><p class="hero-copy">Turn a photo into a little desktop companion.<br/>All their personality. A fraction of the size.</p></div><div aria-hidden="true" class="hero-stamp"><svg class="icon"><use href="#i-spark"></use></svg><span>100% FRIEND<br/>0% CHILL</span></div></div>
+<div class="creator-grid">
+<div class="creation-panel">
+<ol aria-label="Character creation progress" class="stepper">
+<li aria-current="step" class="current" id="step-photo"><span>01</span>The human</li><li id="step-personality"><span>02</span>The personality</li><li id="step-ready"><span>03</span>The menace</li>
+</ol>
+<form id="character-form" novalidate="">
+<section aria-labelledby="photo-title" class="form-step" id="photo-step">
+<div class="section-heading"><div><h2 id="photo-title">Who are we shrinking?</h2><p>Start with a name and a full-body photo.</p></div><span class="step-count">01 / 03</span></div>
+<label class="field-label" for="friend-name">Your friend's name <span id="name-count">0 / 32</span></label>
+<input aria-describedby="form-error" autocomplete="off" class="text-input" id="friend-name" maxlength="32" name="name" placeholder="e.g. Alex, your favorite menace" required="" type="text"/>
+<div class="field-label photo-label"><label for="photo-input">Full-body photo</label><span>ONE FRIEND PER PHOTO</span></div>
+<input class="sr-only" id="photo-input" type="file"/>
+<button aria-describedby="photo-guidance" class="drop-zone" id="drop-zone" type="button">
+<span id="drop-empty"><span class="upload-symbol"><svg class="icon"><use href="#i-upload"></use></svg></span><strong>Drop your friend here</strong><span>or <em>browse files</em> to find their good side</span><small>Any file works for this demo</small></span>
+<span hidden="" id="photo-selected"><img alt="Selected full-body source photo" id="photo-image"/><span class="photo-overlay"><svg class="icon"><use href="#i-image"></use></svg>Replace photo</span></span>
+</button>
+<div class="photo-meta" hidden="" id="photo-meta"><span><span id="photo-filename"></span><small id="photo-file-note"></small></span><button class="text-button" id="remove-photo" type="button">Remove</button></div>
+<p class="photo-tip" id="photo-guidance"><svg class="icon"><use href="#i-check"></use></svg>Head to toe, facing forward, with a clear background.</p>
+<label class="consent-label"><input id="photo-consent" type="checkbox"/><span>I have my friend's permission to use this photo.</span></label>
+<div class="inline-error" hidden="" id="form-error" role="alert"></div>
+<div class="step-actions"><span class="quiet-caption">Next up: their main-character energy.</span><button class="button primary" id="next-button" type="submit">Give them a personality<svg class="icon"><use href="#i-arrow"></use></svg></button></div>
+</section>
+<section aria-labelledby="personality-title" class="form-step" hidden="" id="personality-step">
+<div class="section-heading"><div><h2 id="personality-title" tabindex="-1">Born this way. Mostly.</h2><p>Dial in the things that make them, them.</p></div><span class="step-count">02 / 03</span></div>
+<div aria-label="Personality presets" class="presets"><button data-preset="wildcard" type="button">↯ Wildcard</button><button data-preset="sweetheart" type="button">♡ Sweetheart</button><button data-preset="tryhard" type="button">↗ Tryhard</button><button aria-label="Randomize personality" class="shuffle-button" id="shuffle-traits" type="button"><svg class="icon"><use href="#i-shuffle"></use></svg></button></div>
+<div id="trait-controls"></div>
+<div class="service-info" id="service-info"><span class="service-dot"></span><p id="service-copy">Demo mode. Preview a tiny friend instantly — no backend needed.</p></div>
+<div class="inline-error" hidden="" id="generation-error" role="alert"></div>
+<div class="step-actions"><button class="button secondary" id="back-photo" type="button"><svg class="icon"><use href="#i-back"></use></svg>Back</button><button class="button primary" id="generate-button" type="button">Create my tiny friend</button></div>
+</section>
+
+<section aria-labelledby="generating-title" class="form-step centered-step" hidden="" id="generating-step">
+<div class="demo-loader" aria-hidden="true">✦</div><span class="eyebrow">A LITTLE DESKTOP MAGIC</span><h2 id="generating-title" tabindex="-1">Making your tiny friend…</h2><p id="generation-status" role="status">Preparing your character…</p><progress id="generation-meter" max="3" value="0" aria-label="Simulated generation progress"></progress><p class="small-note">Demo mode · simulated generation, no backend request.</p><button class="button secondary" id="cancel-generation" type="button">Back to personality</button>
+</section>
+<section aria-labelledby="ready-title" class="form-step centered-step" hidden="" id="ready-step">
+<div id="ready-figure" aria-label="Demo character preview"></div><span class="eyebrow" id="ready-eyebrow">SMALL FRIEND. BIG PERSONALITY.</span><h2 id="ready-title" tabindex="-1">Your tiny friend is ready.</h2><p id="ready-copy">Ready to cause a little desktop chaos.<br/><small>Demo character · example appearance, not generated from your photo.</small></p><div class="trait-chips" id="ready-traits"></div><div class="inline-error" hidden="" id="ready-error" role="alert"></div><button class="button primary full-width" id="launch-ready" type="button">View your friends</button><button class="button secondary full-width" id="create-another" type="button"><svg class="icon"><use href="#i-plus"></use></svg>Create another friend</button>
+</section>
+</form>
+</div>
+<aside aria-label="Character preview" class="preview-column">
+<div class="specimen-card"><div class="specimen-top"><span id="preview-type">CHARACTER PREVIEW</span><span id="preview-badge">IN THE MAKING<span class="mini-dot"></span></span></div>
+<div class="specimen-stage" id="specimen-stage"><div class="orbital-ring"></div><span class="specimen-cross cross-one">+</span><span class="specimen-cross cross-two">+</span><span class="specimen-sticker" id="preview-sticker">a little<br/>unhinged.</span><div aria-hidden="true" class="mascot" id="preview-mascot"><div class="mascot-head"><span></span><span></span><i></i></div><div class="mascot-body"></div><div class="mascot-arm arm-one"></div><div class="mascot-arm arm-two"></div><div class="mascot-leg leg-one"></div><div class="mascot-leg leg-two"></div></div><img alt="Source photo — not a generated character" hidden="" id="specimen-photo"/><div hidden="" id="specimen-character"></div><span class="ground-shadow"></span><span class="specimen-caption" id="specimen-caption">YOUR FUTURE DESKTOP MENACE</span></div>
+<div class="specimen-bottom"><p id="preview-name">Your friend, but smaller.</p><span id="preview-description">Small size. Questionable intentions.</span><div class="preview-traits" id="preview-traits"><span>↯ CHAOS <b>5</b></span><span>✳ BRAINROT <b>5</b></span></div></div>
+</div>
+<div class="example-callout"><div aria-hidden="true" class="example-faces"><span>:)</span><span>:P</span><span>:3</span></div><div><strong>Just looking around?</strong><p>Explore the controls with a sample illustration.</p><button class="text-button" id="try-examples" type="button">Try a sample setup ↗</button></div></div>
+</aside>
+</div>
+<p class="privacy-note">Demo mode · Your file stays in this window. Character appearances are simulated. Reloading clears this demo.</p>
+</section>
+<section aria-labelledby="roster-title" hidden="" id="roster-view">
+<div class="hero roster-hero"><div><p class="eyebrow"><span class="tiny-dot"></span> GOOD COMPANY. BAD INFLUENCE.</p><h1 id="roster-title" tabindex="-1">Your tiny<br/><span>inner circle.</span></h1><p class="hero-copy">Review names, photos, and personality settings before integration.</p></div><button class="button primary" id="roster-add"><svg class="icon"><use href="#i-plus"></use></svg>Create a friend</button></div>
+<div class="roster-toolbar"><p id="roster-summary">0 friends in your crew</p></div>
+<div class="roster-empty" id="roster-empty"><span class="empty-crew-icon"><svg class="icon"><use href="#i-crew"></use></svg></span><h2>It's a little too quiet in here.</h2><p>Start with one friend. Add the rest of the group chat later.</p><button class="button primary" id="empty-create">Make your first friend<svg class="icon"><use href="#i-plus"></use></svg></button><button class="text-button" id="empty-examples">Or try a sample setup</button></div>
+<div class="roster-grid" id="roster-grid"></div>
+<p class="privacy-note">Demo characters · Example appearances, not photo-generated. Reloading clears this demo.</p>
+</section>
+<footer class="studio-footer"><span>SMALL FRIEND. BIG PERSONALITY.</span><span>Made for your desktop, not your productivity. <i>↗</i></span></footer>
+</main>
+</div>
+<dialog aria-labelledby="help-title" id="help-dialog"><div class="dialog-heading"><span class="eyebrow">THE SHORT VERSION</span><button aria-label="Close help" class="icon-button" data-close=""><svg class="icon"><use href="#i-close"></use></svg></button></div><h2 id="help-title">Your friends, in miniature.</h2><ol class="how-to"><li><span>01</span><div><strong>Bring a photo.</strong><p>A clear, full-body photo of one friend, with their permission.</p></div></li><li><span>02</span><div><strong>Bring the personality.</strong><p>Set Chaos, Brainrot, Competitive, and Friendliness from 0 to 10.</p></div></li><li><span>03</span><div><strong>Let them loose.</strong><p>Watch a short simulated generation, then meet an example tiny friend. Any file works; no backend is contacted.</p></div></li></ol><div class="help-note"><strong id="help-runtime">This is the desktop character setup interface.</strong><p id="help-runtime-copy">Use a photo, set a name, adjust four personality sliders, and manage multiple drafts. No backend calls are made.</p></div><p class="small-note">Photos and drafts stay in this window. Reloading or closing it clears them. The character appearances are demo examples, not real photo-generation results.</p><button class="button primary full-width" data-close="">Got it<svg class="icon"><use href="#i-check"></use></svg></button></dialog>
+
+<dialog aria-labelledby="edit-title" id="edit-dialog"><form id="edit-form"><div class="dialog-heading"><span class="eyebrow">A LITTLE PERSONALITY TUNE-UP</span><button aria-label="Close edit friend" class="icon-button" data-close="" type="button"><svg class="icon"><use href="#i-close"></use></svg></button></div><h2 id="edit-title">Still your friend. New energy.</h2><label class="field-label" for="edit-name">Name</label><input class="text-input" id="edit-name" maxlength="32" required=""/><div id="edit-traits"></div><div class="inline-error" hidden="" id="edit-error" role="alert"></div><button class="button primary full-width" type="submit">Save changes<svg class="icon"><use href="#i-check"></use></svg></button></form></dialog>
+<dialog aria-labelledby="delete-title" id="delete-dialog"><div class="dialog-heading"><span class="eyebrow">NO HARD FEELINGS</span><button aria-label="Cancel removal" class="icon-button" data-close=""><svg class="icon"><use href="#i-close"></use></svg></button></div><h2 id="delete-title">Remove this friend?</h2><p class="dialog-copy">Remove this draft from this setup window? Your original photo is not changed.</p><div class="inline-error" hidden="" id="delete-error" role="alert"></div><div class="dialog-actions"><button class="button secondary" data-close="">Keep friend</button><button class="button danger" id="confirm-delete">Remove friend</button></div></dialog>
+<div hidden="" id="toast" role="status"></div>
+
+<script defer src="./setup.js"></script></body>
+</html>
