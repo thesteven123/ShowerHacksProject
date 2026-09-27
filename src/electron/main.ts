@@ -34,7 +34,9 @@ function updateMousePassthrough(): void {
       y >= region.y &&
       y <= region.y + region.height,
   );
-  const shouldIgnore = !(gameMode || petDragging || overPet);
+  const pageUrl = mainWindow.webContents.getURL();
+  const onSetup = pageUrl.includes("/setup/");
+  const shouldIgnore = !onSetup && !(gameMode || petDragging || overPet);
   if (shouldIgnore !== ignoringMouse) {
     mainWindow.setIgnoreMouseEvents(shouldIgnore, { forward: true });
     ignoringMouse = shouldIgnore;
@@ -54,7 +56,7 @@ function targetWorkArea(): Electron.Rectangle {
 
 function createWindow(): void {
   const workArea = targetWorkArea();
-  const uiPath = path.join(__dirname, "../ui/index.html");
+  const uiPath = path.join(__dirname, "../ui/setup/index.html");
   if (!existsSync(uiPath)) {
     console.error(`UI not found at ${uiPath}. Run npm start so the UI is copied into dist/.`);
   }
@@ -91,6 +93,10 @@ function createWindow(): void {
   window.webContents.on("did-start-loading", () => {
     petRegions = [];
     petDragging = false;
+    updateMousePassthrough();
+  });
+  window.webContents.on("did-finish-load", () => {
+    ignoringMouse = null;
     updateMousePassthrough();
   });
 

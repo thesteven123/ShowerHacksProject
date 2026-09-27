@@ -22,7 +22,7 @@ http
       return;
     }
     if (pathname === "/") {
-      response.writeHead(302, { Location: "/ui/index.html" });
+      response.writeHead(302, { Location: "/ui/setup/index.html" });
       response.end();
       return;
     }

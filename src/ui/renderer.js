@@ -51,7 +51,7 @@ let lastSave = 0,
   resizePending = true,
   saveKey;
 let livingWorld;
-let friendsReleased = false;
+let friendsReleased = new URLSearchParams(location.search).get("pop") === "1";
 let pendingAction = null;
 let lastGameId = "aim-challenge";
 let rosterFriends = [];

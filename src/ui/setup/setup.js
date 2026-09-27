@@ -327,6 +327,11 @@
     notifyDrafts();
     toast('Draft removed.');
   });
+  function popFriends() {
+    window.location.href = '../index.html?pop=1';
+  }
+  $('continue-desktop').addEventListener('click', popFriends);
+  $('nav-desktop').addEventListener('click', popFriends);
   refreshTraits();
   updatePreview();
   renderRoster();
