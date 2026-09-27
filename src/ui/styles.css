@@ -177,11 +177,62 @@ input:focus-visible {
   width: 48px;
   height: 48px;
   flex-shrink: 0;
-  background: #cab0ee;
+  background: #cab0ee center top / cover no-repeat;
   color: #25193b;
   border-radius: 14px;
   font-size: 22px;
   font-weight: 800;
+  overflow: hidden;
+}
+.friend-heading > span.has-face {
+  background-color: #1d3028;
+  color: transparent;
+}
+.crew {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  margin: -6px 0 16px;
+}
+.crew-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+  padding: 6px 2px 7px;
+  border-radius: 12px;
+  background: #ffffff08;
+}
+.crew-card.selected {
+  border-color: #d7f76e88;
+  background: #d7f76e18;
+}
+.crew-stage {
+  width: 54px;
+  height: 74px;
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+.crew-stage .figure {
+  transform: scale(0.46);
+  transform-origin: top center;
+  animation: none;
+}
+.crew-stage .arm,
+.crew-stage .leg,
+.crew-stage .forearm {
+  animation: none;
+}
+.crew-name {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 9px;
+  font-weight: 750;
+  letter-spacing: 0.2px;
 }
 h1 {
   font-size: 24px;
