@@ -57,6 +57,15 @@ export type RoundSnapshot = {
   streak: number;
   bestStreak: number;
   target: Target;
+  /** Current aim-challenge prey (may rotate through the roster). */
+  preyId?: string;
+  /** Present while a soccer round is active. */
+  soccer?: {
+    ball: { id: string; x: number; y: number; spin: number } | null;
+    hoop: { x: number; y: number; width: number; height: number };
+    friend: { id: string; x: number; y: number; activity: string };
+    goals: number;
+  };
 };
 export type GameSystemEvent =
   | GameEvent
@@ -70,6 +79,8 @@ export type GameSystemEvent =
 export type PetAction = "pet" | "bark" | "say67";
 export type GameContext = {
   character: FriendCharacter;
+  /** Full friend roster for games that rotate prey (aim challenge). */
+  roster: FriendCharacter[];
   personality: Personality;
   state: PetState;
   bounds: Bounds;
@@ -83,11 +94,17 @@ export interface MiniGame {
   readonly id: string;
   start(context: GameContext, options: GameStartOptions): void;
   update(elapsedMs: number): void;
+  /** Cursor position in arena space. Games that dodge the pointer implement this. */
+  setPointer?(point: Point | null): void;
   shoot(point: Point): boolean;
   resize(bounds: Bounds): void;
   snapshot(): RoundSnapshot;
   result(): RoundResult | null;
   stop(): void;
+  /** Optional arena drag hooks for soccer-style play. */
+  arenaPointerDown?(kind: "friend" | "ball", point: Point): boolean;
+  arenaPointerMove?(point: Point): void;
+  arenaPointerUp?(point: Point): void;
 }
 export type SavedPet = {
   version: 1;

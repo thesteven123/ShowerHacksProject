@@ -27,8 +27,17 @@ export type Prop = {
   id: string;
   type: "ball";
   position: Point;
+  velocity: Point;
+  /** Degrees of roll for the UI. */
+  spin: number;
   createdAt: number;
   createdBy: string;
+};
+export type Hoop = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
 };
 export type SceneKind = "encounter" | "drag_release";
 export type SceneInput = {
@@ -46,13 +55,19 @@ export type WorldEvent =
   | { type: "interrupted"; actorId: string; previous: Activity }
   | { type: "scene"; sceneId: string; kind: SceneKind; output: SceneOutput }
   | { type: "propAdded"; prop: Prop }
-  | { type: "propsChanged"; count: number };
+  | { type: "propsChanged"; count: number }
+  | { type: "ballKicked"; propId: string; actorId: string | null; strength: number }
+  | { type: "ballBounced"; propId: string; surface: "floor" | "wall"; impact: number }
+  | { type: "actorsBumped"; actorIds: [string, string] }
+  | { type: "goalScored"; propId: string; scorerId: string | null; score: number };
 export type WorldSnapshot = {
   actors: Actor[];
   relationships: Relationship[];
   props: Prop[];
   bounds: Bounds;
   scene: { id: string; kind: SceneKind; lines: SceneOutput["lines"] } | null;
+  score: number;
+  hoop: Hoop | null;
 };
 export type WorldSave = {
   version: 1;

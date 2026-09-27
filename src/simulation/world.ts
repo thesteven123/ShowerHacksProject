@@ -11,6 +11,20 @@ const LEAVE_DISTANCE = 155;
 const ENCOUNTER_COOLDOWN = 60_000;
 const SCENE_COOLDOWN = 12_000;
 const BODY_MARGIN = 42;
+const ACTOR_RADIUS = 34;
+const BALL_RADIUS = 12;
+const GRAVITY = 920;
+const FLOOR_FRICTION = 0.86;
+const WALL_BOUNCE = 0.62;
+const FLOOR_BOUNCE = 0.55;
+const KICK_SPEED = 280;
+const SETTLE_SPEED = 55;
+const KICK_COOLDOWN_MS = 480;
+const BUMP_EVENT_COOLDOWN_MS = 900;
+const THROW_MIN_SPEED = 55;
+const HOOP_WIDTH = 52;
+const HOOP_HEIGHT = 30;
+const GOAL_COOLDOWN_MS = 900;
 
 type WorldOptions = {
   friends: FriendCharacter[];
@@ -18,6 +32,8 @@ type WorldOptions = {
   personalities?: Record<string, Personality>;
   random?: () => number;
   director?: SceneDirector;
+  /** When true, hoop scoring and competitive aim-at-hoop behavior are active. */
+  goalsEnabled?: boolean;
 };
 
 function defaultPersonality(friend: FriendCharacter): Personality {
@@ -55,6 +71,17 @@ export class DesktopWorld {
   private sceneEndsAt = 0;
   private lastSceneAt = -Infinity;
   private dragging: string | null = null;
+  private draggingBall: string | null = null;
+  private dragSample: { x: number; y: number; at: number } | null = null;
+  private dragVelocity: Point = { x: 0, y: 0 };
+  private actorMotion = new Map<string, Point>();
+  private kickReadyAt = new Map<string, number>();
+  private bumpReadyAt = new Map<string, number>();
+  private lastToucher = new Map<string, string>();
+  private ballInHoop = new Set<string>();
+  private goalReadyAt = new Map<string, number>();
+  private score = 0;
+  private goalsEnabled: boolean;
   private paused = false;
 
   constructor(options: WorldOptions) {
@@ -63,6 +90,7 @@ export class DesktopWorld {
     this.bounds = validBounds(options.bounds);
     this.random = options.random ?? Math.random;
     this.director = options.director ?? new SceneDirector();
+    this.goalsEnabled = Boolean(options.goalsEnabled);
     this.actors = options.friends.map((friend, index) => ({
       id: friend.id, name: friend.name, vibe: friend.vibe,
       personality: validatePersonality(options.personalities?.[friend.id] ?? defaultPersonality(friend)),
@@ -87,11 +115,47 @@ export class DesktopWorld {
     const minY = Math.min(108, this.bounds.height / 2), maxY = Math.max(minY, this.bounds.height - 4);
     return { x: clamp(point.x, minX, maxX), y: clamp(point.y, minY, maxY) };
   }
+  private ballBounds(): { minX: number; maxX: number; minY: number; maxY: number } {
+    const minX = BALL_RADIUS + 4;
+    const maxX = Math.max(minX, this.bounds.width - BALL_RADIUS - 4);
+    const minY = BALL_RADIUS + 8;
+    const maxY = Math.max(minY, this.bounds.height - BALL_RADIUS - 6);
+    return { minX, maxX, minY, maxY };
+  }
+  private hoopRect(): { x: number; y: number; width: number; height: number } {
+    const width = Math.min(HOOP_WIDTH, Math.max(36, this.bounds.width * 0.08));
+    const height = Math.min(HOOP_HEIGHT, Math.max(22, this.bounds.height * 0.05));
+    return {
+      x: Math.max(8, this.bounds.width - width - 18),
+      y: Math.max(18, Math.min(96, this.bounds.height * 0.12)),
+      width,
+      height,
+    };
+  }
+  private hoopCenter(): Point {
+    const hoop = this.hoopRect();
+    return { x: hoop.x + hoop.width / 2, y: hoop.y + hoop.height / 2 };
+  }
+  private confineBall(point: Point): Point {
+    const box = this.ballBounds();
+    return { x: clamp(point.x, box.minX, box.maxX), y: clamp(point.y, box.minY, box.maxY) };
+  }
   setBounds(bounds: Bounds): void {
     const next = validBounds(bounds), previous = this.bounds;
     this.bounds = next;
     for (const actor of this.actors) actor.position = this.confined({ x: actor.position.x / previous.width * next.width, y: actor.position.y / previous.height * next.height });
-    for (const prop of this.props) prop.position = this.confined({ x: prop.position.x / previous.width * next.width, y: prop.position.y / previous.height * next.height });
+    for (const prop of this.props) prop.position = this.confineBall({ x: prop.position.x / previous.width * next.width, y: prop.position.y / previous.height * next.height });
+  }
+  setGoalsEnabled(enabled: boolean): void {
+    this.goalsEnabled = enabled;
+    if (!enabled) {
+      this.score = 0;
+      this.ballInHoop.clear();
+      this.goalReadyAt.clear();
+    }
+  }
+  goalsAreEnabled(): boolean {
+    return this.goalsEnabled;
   }
   setPaused(paused: boolean): void {
     this.paused = paused; this.lastTickMs = null; this.remainderMs = 0;
@@ -100,7 +164,42 @@ export class DesktopWorld {
   setPersonality(actorId: string, personality: Personality): boolean {
     const actor = this.actors.find(item => item.id === actorId);
     if (!actor) return false;
-    actor.personality = validatePersonality(personality);
+    const previous = actor.personality;
+    const next = validatePersonality(personality);
+    actor.personality = next;
+    if (this.brainrotOutbreak()) {
+      this.parkForSixSeven();
+      return true;
+    }
+    if (previous.brainrot >= 10) {
+      this.decisionAt.set(actor.id, this.elapsedMs);
+      this.activityEndsAt.set(actor.id, this.elapsedMs);
+    }
+    if (actor.activity === "dragged" || actor.activity === "talk") return true;
+    if (next.competitive > previous.competitive) {
+      const ball = this.props.find(prop => prop.type === "ball" && !this.actors.some(other => other.id !== actor.id && other.reservations.includes(prop.id)));
+      if (ball) {
+        if (actor.activity !== "play") {
+          actor.activity = "play";
+          actor.activityVersion++;
+        }
+        actor.reservations = [ball.id];
+        this.activityEndsAt.set(actor.id, this.elapsedMs + 4500);
+        this.decisionAt.set(actor.id, this.elapsedMs + 4500);
+        return true;
+      }
+    }
+    if (next.chaos > previous.chaos || next.friendliness > previous.friendliness) {
+      if (actor.activity !== "walk") {
+        actor.activity = "walk";
+        actor.activityVersion++;
+        actor.reservations = [];
+      }
+      if (next.friendliness >= 10) this.headings.set(actor.id, this.headingToward(actor));
+      else if (next.chaos > previous.chaos) this.headings.set(actor.id, this.random() * Math.PI * 2);
+      this.activityEndsAt.set(actor.id, this.elapsedMs + 2800);
+      this.decisionAt.set(actor.id, this.elapsedMs + 2800);
+    }
     return true;
   }
   tick(nowMs: number): void {
@@ -115,6 +214,8 @@ export class DesktopWorld {
   private step(delta: number): void {
     this.elapsedMs += delta;
     if (this.scene && this.elapsedMs >= this.sceneEndsAt) this.finishScene();
+    const outbreak = this.brainrotOutbreak();
+    if (outbreak && this.scene) this.finishScene();
     for (const actor of this.actors) {
       actor.needs.energy = clamp(actor.needs.energy + (actor.activity === "rest" ? 0.8 : -0.09), 0, 100);
       actor.needs.boredom = clamp(actor.needs.boredom + (actor.activity === "read" || actor.activity === "play" ? -0.6 : 0.14), 0, 100);
@@ -122,29 +223,372 @@ export class DesktopWorld {
       actor.needs.hygiene = clamp(actor.needs.hygiene - 0.012, 0, 100);
       actor.mood.irritation = clamp(actor.mood.irritation - 0.02, 0, 100);
       actor.mood.joy = clamp(actor.mood.joy + (actor.activity === "play" ? 0.08 : actor.needs.boredom > 80 ? -0.03 : 0), 0, 100);
+      if (outbreak) {
+        if (actor.activity !== "dragged" && actor.activity !== "idle") {
+          actor.activity = "idle";
+          actor.activityVersion++;
+          actor.reservations = [];
+        }
+        continue;
+      }
       if (actor.activity === "walk") this.moveActor(actor, delta);
+      if (actor.activity === "play") this.playWithBall(actor, delta);
       if (actor.activity !== "dragged" && actor.activity !== "talk" && this.elapsedMs >= (this.decisionAt.get(actor.id) ?? 0) && this.elapsedMs >= (this.activityEndsAt.get(actor.id) ?? 0)) this.chooseActivity(actor);
+      this.holdExtremes(actor);
     }
-    this.checkEncounters();
+    if (!outbreak) this.resolveActorCollisions();
+    this.stepBalls(delta);
+    if (!outbreak) this.resolveActorBallCollisions();
+    if (!outbreak) this.checkEncounters();
+  }
+  private brainrotOutbreak(): boolean {
+    return this.actors.some(actor => actor.personality.brainrot >= 10);
+  }
+  private nearestActor(actor: Actor): Actor | null {
+    let nearest: Actor | null = null;
+    let best = Infinity;
+    for (const other of this.actors) {
+      if (other.id === actor.id) continue;
+      const gap = distance(actor.position, other.position);
+      if (gap < best) {
+        best = gap;
+        nearest = other;
+      }
+    }
+    return nearest;
+  }
+  private headingToward(actor: Actor): number {
+    const nearest = this.nearestActor(actor);
+    if (!nearest) return this.headings.get(actor.id) ?? 0;
+    return Math.atan2(nearest.position.y - actor.position.y, nearest.position.x - actor.position.x);
+  }
+  private headingAway(actor: Actor): number {
+    const nearest = this.nearestActor(actor);
+    const current = this.headings.get(actor.id) ?? 0;
+    if (!nearest || distance(actor.position, nearest.position) > 220) return current;
+    return Math.atan2(actor.position.y - nearest.position.y, actor.position.x - nearest.position.x);
+  }
+  private extremeActivity(actor: Actor): Activity | null {
+    if (actor.personality.competitive >= 10 && this.props.some(prop => prop.type === "ball")) return "play";
+    if (actor.personality.friendliness >= 10 || actor.personality.friendliness <= 0 || actor.personality.chaos >= 10) return "walk";
+    return null;
+  }
+  private holdExtremes(actor: Actor): void {
+    if (actor.activity === "dragged" || actor.activity === "talk") return;
+    const forced = this.extremeActivity(actor);
+    if (!forced) return;
+    if (forced === "walk") {
+      if (actor.personality.friendliness >= 10) this.headings.set(actor.id, this.headingToward(actor));
+      else if (actor.personality.friendliness <= 0) this.headings.set(actor.id, this.headingAway(actor));
+    }
+    if (actor.activity === forced) {
+      if (forced === "play") {
+        const ball = this.props.find(prop => prop.type === "ball");
+        if (ball) actor.reservations = [ball.id];
+      }
+      return;
+    }
+    actor.activity = forced;
+    actor.activityVersion++;
+    if (forced === "play") {
+      const ball = this.props.find(prop => prop.type === "ball");
+      actor.reservations = ball ? [ball.id] : [];
+    } else actor.reservations = [];
+    this.activityEndsAt.set(actor.id, this.elapsedMs + 2800);
+    this.decisionAt.set(actor.id, this.elapsedMs + 2800);
+  }
+  private parkForSixSeven(): void {
+    if (this.scene) this.finishScene();
+    for (const actor of this.actors) {
+      if (actor.activity === "dragged") continue;
+      if (actor.activity !== "idle") {
+        actor.activity = "idle";
+        actor.activityVersion++;
+        actor.reservations = [];
+      }
+    }
+  }
+  private steer(actor: Actor, heading: number): void {
+    const probe = 36;
+    const next = { x: actor.position.x + Math.cos(heading) * probe, y: actor.position.y + Math.sin(heading) * probe };
+    const confined = this.confined(next);
+    this.headings.set(actor.id, confined.x === next.x && confined.y === next.y ? heading : heading + Math.PI / 2);
   }
   private moveActor(actor: Actor, delta: number): void {
+    const chaosMax = actor.personality.chaos >= 10;
+    if (actor.personality.friendliness >= 10) this.steer(actor, this.headingToward(actor));
+    else if (actor.personality.friendliness <= 0) this.steer(actor, this.headingAway(actor));
+    else if (chaosMax && this.random() < 0.4) this.headings.set(actor.id, this.random() * Math.PI * 2);
     const heading = this.headings.get(actor.id) ?? 0;
-    const speed = 22 + actor.personality.chaos * 3;
+    const speed = chaosMax ? 110 : 22 + actor.personality.chaos * 3;
+    const prev = actor.position;
     const next = { x: actor.position.x + Math.cos(heading) * speed * delta / 1000, y: actor.position.y + Math.sin(heading) * speed * delta / 1000 };
     const confined = this.confined(next);
-    if (confined.x !== next.x || confined.y !== next.y) this.headings.set(actor.id, heading + Math.PI * 0.7);
+    if (confined.x !== next.x || confined.y !== next.y) this.headings.set(actor.id, heading + Math.PI * (chaosMax ? 0.65 + this.random() * 0.5 : 0.7));
     actor.position = confined;
+    const dt = delta / 1000;
+    this.actorMotion.set(actor.id, { x: (confined.x - prev.x) / dt, y: (confined.y - prev.y) / dt });
+  }
+  private playWithBall(actor: Actor, delta: number): void {
+    const ball = this.props.find(prop => prop.id === actor.reservations[0]) ?? this.props.find(prop => prop.type === "ball");
+    if (!ball) {
+      actor.activity = "idle";
+      actor.activityVersion++;
+      return;
+    }
+    if (ball.id === this.draggingBall) return;
+    if (!actor.reservations.includes(ball.id)) actor.reservations = [ball.id];
+    const gap = distance(actor.position, ball.position);
+    if (gap > ACTOR_RADIUS + BALL_RADIUS + 8) {
+      // In goal mode, competitive friends approach from the far side so kicks face the hoop.
+      let tx = ball.position.x, ty = ball.position.y;
+      if (this.goalsEnabled && actor.personality.competitive >= 6) {
+        const hoop = this.hoopCenter();
+        tx = ball.position.x - (hoop.x - ball.position.x) * 0.12;
+        ty = ball.position.y - (hoop.y - ball.position.y) * 0.08 + 18;
+      }
+      const speed = actor.personality.competitive >= 10 ? 130 : 34 + actor.personality.competitive * 3;
+      const dx = tx - actor.position.x;
+      const dy = ty - actor.position.y;
+      const dist = Math.hypot(dx, dy) || 1;
+      const step = Math.min(dist, speed * delta / 1000);
+      const prev = actor.position;
+      actor.position = this.confined({
+        x: actor.position.x + (dx / dist) * step,
+        y: actor.position.y + (dy / dist) * step,
+      });
+      this.headings.set(actor.id, Math.atan2(ball.position.y - actor.position.y, ball.position.x - actor.position.x));
+      const dt = delta / 1000;
+      this.actorMotion.set(actor.id, { x: (actor.position.x - prev.x) / dt, y: (actor.position.y - prev.y) / dt });
+    } else {
+      const power = (actor.personality.competitive >= 10 ? 1.6 : 1) * (actor.personality.chaos >= 10 ? 1.35 : 1);
+      this.tryKick(ball, actor, KICK_SPEED * (0.85 + actor.personality.competitive * 0.04) * power);
+      actor.mood.joy = clamp(actor.mood.joy + 0.4, 0, 100);
+    }
+  }
+  private resolveActorCollisions(): void {
+    for (let i = 0; i < this.actors.length; i++) {
+      for (let j = i + 1; j < this.actors.length; j++) {
+        const a = this.actors[i], b = this.actors[j];
+        if (a.activity === "dragged" || b.activity === "dragged") continue;
+        if (a.activity === "talk" || b.activity === "talk") continue;
+        const gap = distance(a.position, b.position);
+        const minGap = ACTOR_RADIUS * 2;
+        if (gap >= minGap || gap < 0.001) continue;
+        const nx = (b.position.x - a.position.x) / gap;
+        const ny = (b.position.y - a.position.y) / gap;
+        const overlap = (minGap - gap) / 2;
+        a.position = this.confined({ x: a.position.x - nx * overlap, y: a.position.y - ny * overlap });
+        b.position = this.confined({ x: b.position.x + nx * overlap, y: b.position.y + ny * overlap });
+        const loner = a.personality.friendliness <= 0 || b.personality.friendliness <= 0;
+        const sticky = !loner && (a.personality.friendliness >= 10 || b.personality.friendliness >= 10);
+        if ((a.activity === "walk" || b.activity === "walk") && !sticky) {
+          const bounce = Math.atan2(ny, nx);
+          const wild = a.personality.chaos >= 10 || b.personality.chaos >= 10;
+          if (a.activity === "walk") this.headings.set(a.id, bounce + Math.PI + (wild ? this.random() * 1.4 : (this.random() - 0.5) * 0.6));
+          if (b.activity === "walk") this.headings.set(b.id, bounce + (wild ? this.random() * 1.4 : (this.random() - 0.5) * 0.6));
+          a.mood.irritation = clamp(a.mood.irritation + (wild ? 1.4 : 0.8), 0, 100);
+          b.mood.irritation = clamp(b.mood.irritation + (wild ? 1.4 : 0.8), 0, 100);
+          this.emitBump(a.id, b.id);
+        }
+        if (loner) {
+          if (a.personality.friendliness <= 0 && a.activity === "walk") this.headings.set(a.id, Math.atan2(-ny, -nx));
+          if (b.personality.friendliness <= 0 && b.activity === "walk") this.headings.set(b.id, Math.atan2(ny, nx));
+        }
+      }
+    }
+  }
+  private stepBalls(delta: number): void {
+    const dt = delta / 1000;
+    const box = this.ballBounds();
+    for (const ball of this.props) {
+      if (ball.type !== "ball" || ball.id === this.draggingBall) continue;
+      const grounded = ball.position.y >= box.maxY - 0.5 && Math.abs(ball.velocity.y) <= SETTLE_SPEED;
+      if (grounded) {
+        ball.position.y = box.maxY;
+        ball.velocity.y = 0;
+        ball.velocity.x *= FLOOR_FRICTION;
+        if (Math.abs(ball.velocity.x) < SETTLE_SPEED) ball.velocity.x = 0;
+        ball.position.x = clamp(ball.position.x + ball.velocity.x * dt, box.minX, box.maxX);
+        ball.spin += ball.velocity.x * dt * 4.2;
+        continue;
+      }
+      ball.velocity.y += GRAVITY * dt;
+      ball.position.x += ball.velocity.x * dt;
+      ball.position.y += ball.velocity.y * dt;
+      ball.spin += ball.velocity.x * dt * 4.2;
+      if (ball.position.x <= box.minX) {
+        ball.position.x = box.minX;
+        const impact = Math.abs(ball.velocity.x);
+        ball.velocity.x = Math.abs(ball.velocity.x) * WALL_BOUNCE;
+        if (impact > 40) this.emit({ type: "ballBounced", propId: ball.id, surface: "wall", impact });
+      } else if (ball.position.x >= box.maxX) {
+        ball.position.x = box.maxX;
+        const impact = Math.abs(ball.velocity.x);
+        ball.velocity.x = -Math.abs(ball.velocity.x) * WALL_BOUNCE;
+        if (impact > 40) this.emit({ type: "ballBounced", propId: ball.id, surface: "wall", impact });
+      }
+      if (ball.position.y <= box.minY) {
+        ball.position.y = box.minY;
+        ball.velocity.y = Math.abs(ball.velocity.y) * WALL_BOUNCE;
+      } else if (ball.position.y >= box.maxY) {
+        ball.position.y = box.maxY;
+        const impact = Math.abs(ball.velocity.y);
+        ball.velocity.y = impact <= SETTLE_SPEED ? 0 : -impact * FLOOR_BOUNCE;
+        ball.velocity.x *= FLOOR_FRICTION;
+        if (Math.abs(ball.velocity.x) < SETTLE_SPEED * 0.35) ball.velocity.x = 0;
+        if (impact > SETTLE_SPEED) this.emit({ type: "ballBounced", propId: ball.id, surface: "floor", impact });
+      }
+      this.checkGoal(ball);
+    }
+  }
+  private checkGoal(ball: Prop): void {
+    if (!this.goalsEnabled) return;
+    const hoop = this.hoopRect();
+    const inside =
+      ball.position.x >= hoop.x &&
+      ball.position.x <= hoop.x + hoop.width &&
+      ball.position.y >= hoop.y &&
+      ball.position.y <= hoop.y + hoop.height;
+    if (!inside) {
+      this.ballInHoop.delete(ball.id);
+      return;
+    }
+    if (this.ballInHoop.has(ball.id)) return;
+    if (this.elapsedMs < (this.goalReadyAt.get(ball.id) ?? 0)) return;
+    if (Math.hypot(ball.velocity.x, ball.velocity.y) < 35) return;
+    this.ballInHoop.add(ball.id);
+    this.goalReadyAt.set(ball.id, this.elapsedMs + GOAL_COOLDOWN_MS);
+    this.score += 1;
+    const scorerId = this.lastToucher.get(ball.id) ?? null;
+    if (scorerId) {
+      const scorer = this.actors.find(actor => actor.id === scorerId);
+      if (scorer) {
+        const boost = 6 + scorer.personality.competitive * 1.2;
+        scorer.mood.joy = clamp(scorer.mood.joy + boost, 0, 100);
+        scorer.needs.boredom = clamp(scorer.needs.boredom - 8, 0, 100);
+      }
+    }
+    // Soft reject so the ball doesn't stick in the rim.
+    ball.velocity.x = -Math.abs(ball.velocity.x) * 0.4 - 40;
+    ball.velocity.y = Math.abs(ball.velocity.y) * 0.35 + 60;
+    this.emit({ type: "goalScored", propId: ball.id, scorerId, score: this.score });
+  }
+  private resolveActorBallCollisions(): void {
+    for (const ball of this.props) {
+      if (ball.type !== "ball" || ball.id === this.draggingBall) continue;
+      for (const actor of this.actors) {
+        if (actor.activity === "dragged" || actor.activity === "talk") continue;
+        const gap = distance(actor.position, ball.position);
+        const minGap = ACTOR_RADIUS + BALL_RADIUS;
+        if (gap >= minGap || gap < 0.001) continue;
+        const nx = (ball.position.x - actor.position.x) / gap;
+        const ny = (ball.position.y - actor.position.y) / gap;
+        const overlap = minGap - gap;
+        ball.position = this.confineBall({ x: ball.position.x + nx * overlap, y: ball.position.y + ny * overlap });
+        const motion = this.actorMotion.get(actor.id) ?? { x: 0, y: 0 };
+        const approachSpeed = Math.max(0, motion.x * nx + motion.y * ny);
+        const chaosKick = actor.personality.chaos >= 10 ? 1.45 : 1;
+        const base = (actor.activity === "play" ? KICK_SPEED * 1.15 : KICK_SPEED * 0.75) * chaosKick;
+        const speed = base * (0.9 + this.random() * 0.2) * (1 + clamp(approachSpeed / 90, 0, 1.6));
+        if (this.tryKick(ball, actor, speed) && (actor.activity === "walk" || actor.activity === "idle")) {
+          actor.mood.joy = clamp(actor.mood.joy + 0.25, 0, 100);
+        }
+      }
+    }
+  }
+  private tryKick(ball: Prop, actor: Actor, speed: number): boolean {
+    const key = `${actor.id}::${ball.id}`;
+    if (this.elapsedMs < (this.kickReadyAt.get(key) ?? 0)) return false;
+    this.kickReadyAt.set(key, this.elapsedMs + KICK_COOLDOWN_MS);
+    this.kickBall(ball, actor.position, speed, actor);
+    this.lastToucher.set(ball.id, actor.id);
+    this.emit({ type: "ballKicked", propId: ball.id, actorId: actor.id, strength: speed });
+    return true;
+  }
+  private kickBall(ball: Prop, from: Point, speed: number, actor?: Actor): void {
+    let dx = ball.position.x - from.x;
+    let dy = ball.position.y - from.y;
+    if (actor && this.goalsEnabled && actor.personality.competitive >= 5) {
+      const hoop = this.hoopCenter();
+      const hx = hoop.x - ball.position.x;
+      const hy = hoop.y - ball.position.y;
+      const blend = clamp(actor.personality.competitive / 10, 0.4, 0.88);
+      dx = dx * (1 - blend) + hx * blend;
+      dy = dy * (1 - blend) + hy * blend;
+    }
+    const gap = Math.hypot(dx, dy) || 1;
+    const lift = Math.max(0.2, -dy / gap) * 0.35 + 0.45;
+    ball.velocity.x = (dx / gap) * speed + (this.random() - 0.5) * (actor && actor.personality.competitive >= 8 ? 18 : 40);
+    ball.velocity.y = (dy / gap) * speed * 0.55 - speed * lift;
+  }
+  private emitBump(aId: string, bId: string): void {
+    const key = pairKey(aId, bId);
+    if (this.elapsedMs < (this.bumpReadyAt.get(key) ?? 0)) return;
+    this.bumpReadyAt.set(key, this.elapsedMs + BUMP_EVENT_COOLDOWN_MS);
+    this.emit({ type: "actorsBumped", actorIds: [aId, bId] });
+  }
+  private sampleDrag(point: Point): void {
+    const at = typeof performance !== "undefined" ? performance.now() : this.elapsedMs;
+    if (this.dragSample) {
+      const dt = Math.max(16, at - this.dragSample.at);
+      this.dragVelocity = {
+        x: (point.x - this.dragSample.x) / dt * 1000,
+        y: (point.y - this.dragSample.y) / dt * 1000,
+      };
+    }
+    this.dragSample = { x: point.x, y: point.y, at };
+  }
+  private clearDragSample(): void {
+    this.dragSample = null;
+    this.dragVelocity = { x: 0, y: 0 };
+  }
+  private flingNearbyBalls(from: Point, actorId: string | null): void {
+    const throwSpeed = Math.hypot(this.dragVelocity.x, this.dragVelocity.y);
+    if (throwSpeed < THROW_MIN_SPEED) return;
+    for (const ball of this.props) {
+      if (ball.type !== "ball" || ball.id === this.draggingBall) continue;
+      if (distance(from, ball.position) > ACTOR_RADIUS + BALL_RADIUS + 28) continue;
+      const strength = clamp(throwSpeed * 0.85, KICK_SPEED * 0.7, KICK_SPEED * 2.2);
+      ball.velocity.x = this.dragVelocity.x * 0.9 + (this.random() - 0.5) * 30;
+      ball.velocity.y = this.dragVelocity.y * 0.75 - Math.abs(this.dragVelocity.x) * 0.15;
+      if (actorId) {
+        this.kickReadyAt.set(`${actorId}::${ball.id}`, this.elapsedMs + KICK_COOLDOWN_MS);
+        this.lastToucher.set(ball.id, actorId);
+      }
+      this.emit({ type: "ballKicked", propId: ball.id, actorId, strength });
+    }
   }
   private chooseActivity(actor: Actor): void {
+    const forced = this.extremeActivity(actor);
+    if (forced) {
+      actor.reservations = [];
+      actor.activity = forced;
+      actor.activityVersion++;
+      this.decisionAt.set(actor.id, this.elapsedMs + 2800);
+      this.activityEndsAt.set(actor.id, this.elapsedMs + 2800);
+      if (forced === "play") {
+        const ball = this.props.find(prop => prop.type === "ball");
+        if (ball) actor.reservations = [ball.id];
+      } else if (actor.personality.friendliness >= 10) this.headings.set(actor.id, this.headingToward(actor));
+      else if (actor.personality.friendliness <= 0) this.headings.set(actor.id, this.headingAway(actor));
+      else this.headings.set(actor.id, this.random() * Math.PI * 2);
+      this.emit({ type: "activity", actorId: actor.id, activity: forced });
+      return;
+    }
     actor.reservations = [];
     const noise = () => this.random() * 9;
     const options: Array<[Activity, number]> = [
-      ["walk", 28 + actor.personality.chaos * 1.5 + noise()],
+      ["walk", 28 + actor.personality.chaos * 1.5 + (actor.personality.friendliness >= 10 ? 36 : 0) + noise()],
       ["read", (10 - actor.personality.chaos) * 4 + actor.needs.boredom * 0.27 + noise()],
       ["rest", (100 - actor.needs.energy) * 0.9 + noise()],
     ];
     const ball = this.props.find(prop => prop.type === "ball" && !this.actors.some(other => other.reservations.includes(prop.id)));
-    if (ball) options.push(["play", actor.personality.competitive * 4 + actor.needs.boredom * 0.3 + (100 - actor.mood.joy) * 0.25 + noise()]);
+    if (ball) {
+      const hunger = actor.personality.competitive * (this.goalsEnabled ? 6.5 : 4) + actor.needs.boredom * 0.35 + (100 - actor.mood.joy) * 0.2;
+      const leadChase = this.goalsEnabled && this.score > 0 ? actor.personality.competitive * 2.5 : 0;
+      options.push(["play", hunger + leadChase + noise()]);
+    }
     options.sort((a, b) => b[1] - a[1]);
     const activity = options[0][0];
     actor.activity = activity; actor.activityVersion++;
@@ -160,6 +604,7 @@ export class DesktopWorld {
       if (gap >= LEAVE_DISTANCE) { this.insidePairs.delete(key); continue; }
       if (gap > ENTER_DISTANCE || this.insidePairs.has(key)) continue;
       this.insidePairs.add(key);
+      if (a.personality.friendliness <= 0 || b.personality.friendliness <= 0) continue;
       if (this.scene || this.dragging || [a.activity, b.activity].some(value => value === "dragged" || value === "talk")) continue;
       const relation = this.relationships.get(`${a.id}->${b.id}`)!;
       if (this.elapsedMs - relation.lastEncounterAt < ENCOUNTER_COOLDOWN) continue;
@@ -181,6 +626,7 @@ export class DesktopWorld {
     this.sceneParticipants = [];
   }
   private beginScene(kind: SceneInput["kind"], participants: Actor[]): void {
+    if (this.brainrotOutbreak()) return;
     if (kind !== "drag_release" && (this.scene || this.elapsedMs - this.lastSceneAt < SCENE_COOLDOWN)) return;
     this.finishScene();
     this.lastSceneAt = this.elapsedMs;
@@ -222,24 +668,32 @@ export class DesktopWorld {
   }
   startDrag(actorId: string): boolean {
     const actor = this.actors.find(item => item.id === actorId);
-    if (!actor || this.dragging) return false;
+    if (!actor || this.dragging || this.draggingBall) return false;
     const previous = actor.activity;
     actor.activityVersion++;
     actor.reservations = [];
     actor.activity = "dragged";
     this.dragging = actorId;
+    this.clearDragSample();
+    this.sampleDrag(actor.position);
     if (this.scene && this.sceneParticipants.includes(actorId)) this.finishScene();
     this.emit({ type: "interrupted", actorId, previous });
     return true;
   }
   dragTo(point: Point): void {
     const actor = this.actors.find(item => item.id === this.dragging);
-    if (actor && Number.isFinite(point.x) && Number.isFinite(point.y)) actor.position = this.confined(point);
+    if (!actor || !Number.isFinite(point.x) || !Number.isFinite(point.y)) return;
+    const next = this.confined(point);
+    this.sampleDrag(next);
+    actor.position = next;
+    this.actorMotion.set(actor.id, { ...this.dragVelocity });
   }
   releaseDrag(): boolean {
     const actor = this.actors.find(item => item.id === this.dragging);
     if (!actor) return false;
+    this.flingNearbyBalls(actor.position, actor.id);
     this.dragging = null;
+    this.clearDragSample();
     actor.activity = "idle";
     actor.activityVersion++;
     this.decisionAt.set(actor.id, this.elapsedMs + 800);
@@ -251,11 +705,63 @@ export class DesktopWorld {
     }
     return true;
   }
+  startBallDrag(propId: string): boolean {
+    if (this.dragging || this.draggingBall) return false;
+    const ball = this.props.find(prop => prop.id === propId && prop.type === "ball");
+    if (!ball) return false;
+    this.draggingBall = propId;
+    ball.velocity = { x: 0, y: 0 };
+    this.clearDragSample();
+    this.sampleDrag(ball.position);
+    return true;
+  }
+  dragBallTo(point: Point): void {
+    const ball = this.props.find(prop => prop.id === this.draggingBall);
+    if (!ball || !Number.isFinite(point.x) || !Number.isFinite(point.y)) return;
+    const next = this.confineBall(point);
+    this.sampleDrag(next);
+    ball.position = next;
+  }
+  releaseBallDrag(): boolean {
+    const ball = this.props.find(prop => prop.id === this.draggingBall);
+    if (!ball) return false;
+    const throwSpeed = Math.hypot(this.dragVelocity.x, this.dragVelocity.y);
+    if (throwSpeed >= THROW_MIN_SPEED) {
+      ball.velocity = {
+        x: this.dragVelocity.x * 0.95,
+        y: this.dragVelocity.y * 0.85 - 40,
+      };
+      this.lastToucher.delete(ball.id);
+      this.emit({ type: "ballKicked", propId: ball.id, actorId: null, strength: throwSpeed });
+    } else {
+      ball.velocity = { x: 0, y: 40 };
+    }
+    this.draggingBall = null;
+    this.clearDragSample();
+    this.emit({ type: "propsChanged", count: this.props.length });
+    return true;
+  }
+  /** Apply an immediate velocity to a ball (tests / scripted flings). */
+  impulseBall(propId: string, velocity: Point): boolean {
+    const ball = this.props.find(prop => prop.id === propId && prop.type === "ball");
+    if (!ball || ball.id === this.draggingBall) return false;
+    if (!Number.isFinite(velocity.x) || !Number.isFinite(velocity.y)) return false;
+    ball.velocity = { x: velocity.x, y: velocity.y };
+    return true;
+  }
   addProp(type: Prop["type"], position: Point, createdBy = "user"): Prop | null {
     if (type !== "ball" || this.props.length >= MAX_PROPS || !Number.isFinite(position.x) || !Number.isFinite(position.y)) return null;
-    const prop: Prop = { id: `prop-${this.nextPropId++}`, type, position: this.confined(position), createdAt: this.elapsedMs, createdBy };
+    const prop: Prop = {
+      id: `prop-${this.nextPropId++}`,
+      type,
+      position: this.confineBall(position),
+      velocity: { x: (this.random() - 0.5) * 36, y: 80 + this.random() * 40 },
+      spin: 0,
+      createdAt: this.elapsedMs,
+      createdBy,
+    };
     this.props.push(prop); this.emit({ type: "propAdded", prop }); this.emit({ type: "propsChanged", count: this.props.length });
-    return { ...prop, position: { ...prop.position } };
+    return { ...prop, position: { ...prop.position }, velocity: { ...prop.velocity } };
   }
   undoProp(): boolean {
     const prop = this.props.pop(); if (!prop) return false;
@@ -264,11 +770,25 @@ export class DesktopWorld {
   }
   cleanDesktop(): void {
     this.props = [];
+    this.draggingBall = null;
+    this.clearDragSample();
+    this.lastToucher.clear();
+    this.ballInHoop.clear();
+    this.goalReadyAt.clear();
+    this.score = 0;
     for (const actor of this.actors) actor.reservations = [];
     this.emit({ type: "propsChanged", count: 0 });
   }
   snapshot(): WorldSnapshot {
-    return structuredClone({ actors: this.actors, relationships: [...this.relationships.values()], props: this.props, bounds: this.bounds, scene: this.scene });
+    return structuredClone({
+      actors: this.actors,
+      relationships: [...this.relationships.values()],
+      props: this.props,
+      bounds: this.bounds,
+      scene: this.scene,
+      score: this.score,
+      hoop: this.goalsEnabled ? this.hoopRect() : null,
+    });
   }
   exportSave(): WorldSave {
     return {
@@ -305,7 +825,15 @@ export class DesktopWorld {
     }
     // Saved simulation milliseconds cannot be compared with a fresh session clock.
     this.relationships = new Map(save.relationships.map(relation => [`${relation.fromId}->${relation.toId}`, { ...relation, lastEncounterAt: -Infinity }]));
-    this.props = save.props.filter(prop => prop.type === "ball" && prop.createdBy === "user").map(prop => ({ id: prop.id, type: "ball", position: this.confined({ x: prop.xRatio * this.bounds.width, y: prop.yRatio * this.bounds.height }), createdAt: prop.createdAt, createdBy: prop.createdBy }));
+    this.props = save.props.filter(prop => prop.type === "ball" && prop.createdBy === "user").map(prop => ({
+      id: prop.id,
+      type: "ball" as const,
+      position: this.confineBall({ x: prop.xRatio * this.bounds.width, y: prop.yRatio * this.bounds.height }),
+      velocity: { x: 0, y: 0 },
+      spin: 0,
+      createdAt: prop.createdAt,
+      createdBy: prop.createdBy,
+    }));
     this.nextPropId = Math.max(0, ...this.props.map(prop => Number(prop.id.replace("prop-", "")) || 0)) + 1;
     return true;
   }

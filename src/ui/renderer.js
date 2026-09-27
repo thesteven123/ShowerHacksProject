@@ -15,10 +15,10 @@ const $ = (id) => document.getElementById(id);
 const bridge = window.tinyMenaces;
 document.body.classList.toggle("preview", !bridge);
 const labels = {
-  chaos: ["Chaos", "Calm routines → spontaneous antics"],
-  brainrot: ["Brainrot", "Ordinary → very online"],
-  competitive: ["Competitive", "Easygoing → always wants a rematch"],
-  friendliness: ["Friendliness", "Reserved → loves company"],
+  chaos: ["Chaos", "Calm routines → max it, they ricochet"],
+  brainrot: ["Brainrot", "Ordinary → all the way up, they 67"],
+  competitive: ["Competitive", "Easygoing → max it, they hunt harder in soccer"],
+  friendliness: ["Friendliness", "Keep away → they clump up"],
 };
 let engine,
   spriteUrl = null,
@@ -31,8 +31,212 @@ let lastSave = 0,
   saveKey;
 let livingWorld;
 let pendingAction = null;
+let lastGameId = "aim-challenge";
+let rosterFriends = [];
+let aimPreyId = null;
+let soccerLayer = null;
+let soccerFriendArt = null;
+let soccerBallNode = null;
+let soccerHoopNode = null;
+let soccerDrag = null;
 const arena = $("arena"),
   target = $("target");
+
+function paintAimTarget(friend) {
+  const targetArt = target.querySelector(".placeholder-art");
+  if (!targetArt || !friend) return;
+  targetArt.className = `placeholder-art roaming vibe-${friend.vibe}`;
+  targetArt.innerHTML = figureMarkup();
+  if (doesSixSeven(friend)) targetArt.classList.add("antic-six-seven");
+  applyLimbs(targetArt, friend);
+  target.setAttribute("aria-label", `${friend.name}, your desktop friend`);
+}
+function paintSoccerFriend(friend) {
+  if (!soccerFriendArt || !friend) return;
+  soccerFriendArt.className = `soccer-friend world-friend roaming vibe-${friend.vibe}`;
+  soccerFriendArt.innerHTML = figureMarkup();
+  if (doesSixSeven(friend)) soccerFriendArt.classList.add("antic-six-seven");
+  applyLimbs(soccerFriendArt, friend);
+  soccerFriendArt.setAttribute("aria-label", `${friend.name}, soccer`);
+}
+function friendInitials(friend) {
+  return friend.name
+    .trim()
+    .split(/\s+/)
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+}
+function petSaveKey(friendId) {
+  return `tiny-menaces:pet:v1:${friendId}`;
+}
+function worldSaveKey(friendId) {
+  return `tiny-menaces:world:v1:${petSaveKey(friendId)}`;
+}
+function loadPetSave(friendId) {
+  try {
+    const saved = localStorage.getItem(petSaveKey(friendId));
+    if (saved) engine.importSave(JSON.parse(saved));
+  } catch {
+    /* Fresh state if saved data is unavailable or invalid. */
+  }
+}
+function populateFriendSelect(friends, activeId) {
+  const select = $("friend-select");
+  if (!select) return;
+  select.replaceChildren(
+    ...friends.map((friend) => {
+      const option = document.createElement("option");
+      option.value = friend.id;
+      option.textContent = friend.name;
+      return option;
+    }),
+  );
+  select.value = activeId;
+}
+function updateFriendChrome(friend) {
+  populateFriendSelect(rosterFriends, friend.id);
+  $("friend-avatar").textContent = friendInitials(friend);
+  paintAimTarget(friend);
+  paintSoccerFriend(friend);
+  livingWorld?.setFocusedFriend(friend.id);
+}
+function switchFriend(friendId) {
+  if (!engine || !friendId) return false;
+  const state = engine.snapshot();
+  if (state.round || state.result) {
+    toast("Finish or leave the round before switching friends.");
+    populateFriendSelect(rosterFriends, state.character.id);
+    return false;
+  }
+  if (friendId === state.character.id) {
+    livingWorld?.setFocusedFriend(friendId);
+    populateFriendSelect(rosterFriends, friendId);
+    return true;
+  }
+  if (!rosterFriends.some((friend) => friend.id === friendId)) return false;
+  save();
+  if (!engine.selectFriend(friendId)) {
+    populateFriendSelect(rosterFriends, state.character.id);
+    return false;
+  }
+  saveKey = petSaveKey(friendId);
+  loadPetSave(friendId);
+  const next = engine.snapshot();
+  livingWorld?.world.setPersonality(friendId, next.personality);
+  editor(next.personality);
+  updateFriendChrome(next.character);
+  try {
+    localStorage.setItem("tiny-menaces:active-friend", friendId);
+  } catch {
+    /* Preference is optional. */
+  }
+  save();
+  render();
+  return true;
+}
+
+function syncAimPrey(state) {
+  if (!state.round || state.round.gameId !== "aim-challenge" || !state.round.preyId) {
+    aimPreyId = null;
+    return;
+  }
+  if (state.round.preyId === aimPreyId) return;
+  aimPreyId = state.round.preyId;
+  const prey =
+    rosterFriends.find((friend) => friend.id === aimPreyId) || state.character;
+  paintAimTarget(prey);
+}
+
+function ensureSoccerLayer(friend) {
+  if (soccerLayer) return;
+  soccerLayer = document.createElement("div");
+  soccerLayer.id = "soccer-layer";
+  soccerLayer.hidden = true;
+  soccerHoopNode = document.createElement("div");
+  soccerHoopNode.className = "world-hoop";
+  soccerHoopNode.innerHTML = `<span class="world-hoop-rim"></span><span class="world-hoop-net"></span>`;
+  soccerBallNode = document.createElement("div");
+  soccerBallNode.className = "world-prop world-prop-ball soccer-ball";
+  soccerFriendArt = document.createElement("div");
+  soccerFriendArt.className = "soccer-friend world-friend roaming";
+  soccerFriendArt.innerHTML = figureMarkup();
+  if (friend) paintSoccerFriend(friend);
+  soccerLayer.append(soccerHoopNode, soccerBallNode, soccerFriendArt);
+  arena.append(soccerLayer);
+
+  soccerLayer.addEventListener("pointerdown", (event) => {
+    if (event.button !== 0 || !engine) return;
+    const snap = engine.snapshot();
+    if (snap.round?.gameId !== "soccer") return;
+    event.preventDefault();
+    event.stopPropagation();
+    const point = pointForArena(event);
+    const kind = event.target.closest(".soccer-ball")
+      ? "ball"
+      : event.target.closest(".soccer-friend")
+        ? "friend"
+        : null;
+    if (kind && engine.arenaPointerDown(kind, point)) {
+      soccerDrag = { pointerId: event.pointerId };
+      soccerLayer.setPointerCapture(event.pointerId);
+    } else {
+      engine.shoot(point);
+    }
+    render();
+  });
+  soccerLayer.addEventListener("pointermove", (event) => {
+    if (!soccerDrag || soccerDrag.pointerId !== event.pointerId) return;
+    engine.arenaPointerMove(pointForArena(event));
+    render();
+  });
+  const endSoccerDrag = (event) => {
+    if (!soccerDrag || soccerDrag.pointerId !== event.pointerId) return;
+    engine.arenaPointerUp(pointForArena(event));
+    soccerDrag = null;
+    render();
+  };
+  soccerLayer.addEventListener("pointerup", endSoccerDrag);
+  soccerLayer.addEventListener("pointercancel", endSoccerDrag);
+}
+
+function pointForArena(event) {
+  const rect = arena.getBoundingClientRect();
+  return {
+    x: event.clientX - rect.left - arena.clientLeft,
+    y: event.clientY - rect.top - arena.clientTop,
+  };
+}
+
+function renderSoccer(state) {
+  const soccer = state.round?.gameId === "soccer" ? state.round.soccer : null;
+  if (!soccerLayer) return;
+  soccerLayer.hidden = !soccer;
+  document.body.classList.toggle("soccer-playing", Boolean(soccer));
+  if (!soccer) return;
+  soccerHoopNode.style.left = `${soccer.hoop.x}px`;
+  soccerHoopNode.style.top = `${soccer.hoop.y}px`;
+  soccerHoopNode.style.width = `${soccer.hoop.width}px`;
+  soccerHoopNode.style.height = `${soccer.hoop.height}px`;
+  if (soccer.goals > (soccerHoopNode.dataset.goals | 0)) {
+    soccerHoopNode.classList.remove("hoop-score");
+    void soccerHoopNode.offsetWidth;
+    soccerHoopNode.classList.add("hoop-score");
+  }
+  soccerHoopNode.dataset.goals = String(soccer.goals);
+  soccerFriendArt.style.left = `${soccer.friend.x}px`;
+  soccerFriendArt.style.top = `${soccer.friend.y}px`;
+  soccerFriendArt.dataset.activity = soccer.friend.activity;
+  if (soccer.ball) {
+    soccerBallNode.hidden = false;
+    soccerBallNode.style.left = `${soccer.ball.x}px`;
+    soccerBallNode.style.top = `${soccer.ball.y}px`;
+    soccerBallNode.style.setProperty("--roll", `${soccer.ball.spin}deg`);
+  } else {
+    soccerBallNode.hidden = true;
+  }
+}
 
 async function react(character, event, anger = 0) {
   if (event === "hit" && anger >= 80) {
@@ -77,10 +281,22 @@ function save() {
   try {
     localStorage.setItem(saveKey, JSON.stringify(engine.exportSave()));
     if (livingWorld)
-      localStorage.setItem(`tiny-menaces:world:v1:${saveKey}`, JSON.stringify(livingWorld.world.exportSave()));
+      localStorage.setItem(worldSaveKey(engine.snapshot().character.id), JSON.stringify(livingWorld.world.exportSave()));
   } catch {
     /* Storage is optional; the game remains playable. */
   }
+}
+function currentPersonality() {
+  return Object.fromEntries(
+    PERSONALITY_KEYS.map((key) => [key, Number($(`trait-${key}`).value)]),
+  );
+}
+function applyPersonalityLive() {
+  if (!engine) return false;
+  const values = currentPersonality();
+  const friendId = engine.snapshot().character.id;
+  if (livingWorld && !livingWorld.world.setPersonality(friendId, values)) return false;
+  return engine.setPersonality(values);
 }
 function editor(personality) {
   for (const key of PERSONALITY_KEYS) {
@@ -102,6 +318,7 @@ function editor(personality) {
       input.id = `trait-${key}`;
       input.addEventListener("input", () => {
         output.textContent = `${input.value} / 10`;
+        applyPersonalityLive();
       });
       const description = document.createElement("small");
       description.textContent = labels[key][1];
@@ -131,7 +348,9 @@ function handleEvent(event) {
     $("hit-effect").style.top = `${position.y - 115}px`;
     $("hit-effect").hidden = false;
     hitUntil = performance.now() + 450;
-    void react(character, "hit", current.state.anger);
+    const prey =
+      rosterFriends.find((friend) => friend.id === event.characterId) || character;
+    void react(prey, "hit", current.state.anger);
   } else if (event.type === "behavior") {
     const reactions = {
       pet: "okay… you're my favorite ♡",
@@ -144,6 +363,8 @@ function handleEvent(event) {
         current.personality.competitive >= 6
           ? "can't catch me. +5 if you can."
           : "a little break. don't you dare.",
+      "soccer-goal":
+        current.personality.competitive >= 7 ? "BOARD." : "score!",
     };
     // The multi-friend world owns autonomous companion dialogue. Keep only
     // player-triggered actions from the single-target game system here.
@@ -169,22 +390,34 @@ function handleEvent(event) {
 }
 function resultView(result) {
   $("result-score").textContent = result.score;
-  const items = [
-    [
-      result.accuracy === null ? "—" : `${Math.round(result.accuracy * 100)}%`,
-      "Accuracy",
-    ],
-    [result.hits, "Hits"],
-    [result.misses, "Misses"],
-    [
-      result.averageHitMs === null
-        ? "—"
-        : `${(result.averageHitMs / 1000).toFixed(2)}s`,
-      "Average time to hit",
-    ],
-    [result.bestStreak, "Best streak"],
-    [`+${CONFIG.xpPerRound + result.hits * CONFIG.xpPerHit}`, "XP earned"],
-  ];
+  const soccer = result.gameId === "soccer";
+  const items = soccer
+    ? [
+        [result.hits, "Goals"],
+        [result.shots, "Kicks"],
+        [result.bestStreak, "Best streak"],
+        [
+          result.accuracy === null ? "—" : `${Math.round(result.accuracy * 100)}%`,
+          "Finish rate",
+        ],
+        [`+${CONFIG.xpPerRound + result.hits * CONFIG.xpPerHit}`, "XP earned"],
+      ]
+    : [
+        [
+          result.accuracy === null ? "—" : `${Math.round(result.accuracy * 100)}%`,
+          "Accuracy",
+        ],
+        [result.hits, "Hits"],
+        [result.misses, "Misses"],
+        [
+          result.averageHitMs === null
+            ? "—"
+            : `${(result.averageHitMs / 1000).toFixed(2)}s`,
+          "Average time to hit",
+        ],
+        [result.bestStreak, "Best streak"],
+        [`+${CONFIG.xpPerRound + result.hits * CONFIG.xpPerHit}`, "XP earned"],
+      ];
   $("result-grid").replaceChildren(
     ...items.map(([value, name]) => {
       const card = document.createElement("div"),
@@ -196,14 +429,20 @@ function resultView(result) {
       return card;
     }),
   );
-  $("result-comment").textContent =
-    result.shots === 0
+  $("result-comment").textContent = soccer
+    ? result.hits === 0
+      ? "“Airball era. Rematch?”"
+      : result.hits >= 3
+        ? "“Okay, board owned.”"
+        : "“Decent shift. Still not enough.”"
+    : result.shots === 0
       ? "“Thanks for choosing peace.”"
       : result.accuracy >= 0.7
         ? "“Okay, you win. We're still friends though, right?”"
         : "“Were you aiming at me or decorating the desktop?”";
-  $("result-context").textContent =
-    `${result.difficulty.toUpperCase()} · Starting anger ${Math.round(result.startingAnger)}/100 · Anger changes target speed.`;
+  $("result-context").textContent = soccer
+    ? `${result.difficulty.toUpperCase()} · Competitive ${result.personality.competitive}/10 · Drag friend or ball, bank the hoop.`
+    : `${result.difficulty.toUpperCase()} · Starting anger ${Math.round(result.startingAnger)}/100 · They dodge the cursor. Anger makes that faster.`;
 }
 function render() {
   if (!engine) return;
@@ -243,7 +482,9 @@ function render() {
     "randomize",
     "save-personality",
     "start",
+    "start-soccer",
     "difficulty",
+    "friend-select",
   ])
     $(id).disabled = !state.interactive || playing;
   for (const key of PERSONALITY_KEYS)
@@ -253,26 +494,36 @@ function render() {
   $("say67").disabled =
     !state.interactive || playing || !state.state.unlocks.includes("say67");
   $("again").disabled = !state.interactive;
+  const soccer = playing && state.round.gameId === "soccer";
   $("arena-eyebrow").textContent = playing
-    ? "AIM CHALLENGE / 30 SECONDS"
+    ? soccer
+      ? "SOCCER / 30 SECONDS"
+      : "AIM CHALLENGE / 30 SECONDS"
     : "COMPANION MODE";
   $("arena-title").textContent = playing
-    ? "You can run. You can also bark."
+    ? soccer
+      ? "Bank it. Competitive friends want that hoop."
+      : "They see the cursor. They do not like it."
     : "A little company. A little chaos.";
   $("play-tip").textContent = playing
-    ? "Click your friend. Taunt windows give +5. Anger makes them faster."
+    ? soccer
+      ? "Drag your friend or the ball. Score in the top-right hoop. Competitive = hungrier."
+      : "Click anyone. After each hit a different friend can spawn. Taunts are +5."
     : "Pet your friend. Let them wander. See what happens.";
   if (playing) {
     $("time").textContent = (state.round.remainingMs / 1000).toFixed(1);
     $("score").textContent = state.round.score;
     $("streak").textContent = state.round.streak;
-    $("accuracy").textContent = state.round.shots
-      ? `${Math.round((state.round.hits / state.round.shots) * 100)}%`
-      : "—";
+    $("accuracy").textContent = soccer
+      ? `${state.round.hits} goals`
+      : state.round.shots
+        ? `${Math.round((state.round.hits / state.round.shots) * 100)}%`
+        : "—";
   }
+  syncAimPrey(state);
   const entity = state.round?.target || state.companion,
     layout = engine.layout;
-  target.hidden = (!playing && !!livingWorld) || !!state.result || entity.phase === "hidden";
+  target.hidden = soccer || (!playing && !!livingWorld) || !!state.result || entity.phase === "hidden";
   target.dataset.phase = entity.phase;
   target.dataset.clip = entity.clip;
   target.dataset.taunt = String(entity.taunting);
@@ -280,12 +531,12 @@ function render() {
   if (spriteUrl)
     target.querySelector(".sprite-art").style.backgroundPosition =
       `${-frameFor(entity.clip, entity.clipTimeMs, layout) * layout.frameWidth}px 0px`;
-  $("taunt-badge").hidden = !playing || !entity.taunting;
+  $("taunt-badge").hidden = !playing || soccer || !entity.taunting;
   $("speech").style.left =
     `${Math.max(8, Math.min(arena.clientWidth - 228, entity.x - 50))}px`;
   $("speech").style.top =
     `${Math.max(12, entity.y - layout.anchor.y * entity.scale - 58)}px`;
-  $("speech").hidden = !playing || performance.now() >= speechUntil || !!state.result;
+  $("speech").hidden = !playing || soccer || performance.now() >= speechUntil || !!state.result;
   if (state.result && JSON.stringify(state.result) !== renderedResultKey) {
     resultView(state.result);
     renderedResultKey = JSON.stringify(state.result);
@@ -297,25 +548,30 @@ function render() {
     $("undo-prop").disabled = !state.interactive || worldState.props.length === 0;
     $("clean-props").disabled = !state.interactive || worldState.props.length === 0;
   }
+  renderSoccer(state);
 }
 async function start() {
-  const friends = bridge ? await bridge.listFriends() : mockFriends,
-    friend = friends[0];
-  if (!friend)
+  const friends = bridge ? await bridge.listFriends() : mockFriends;
+  if (!friends.length)
     throw new Error(
       "No friend available. The game needs at least one character.",
     );
+  let preferredId = null;
+  try {
+    preferredId = localStorage.getItem("tiny-menaces:active-friend");
+  } catch {
+    /* Preference is optional. */
+  }
+  const friend =
+    friends.find((entry) => entry.id === preferredId) || friends[0];
+  rosterFriends = friends;
   engine = new GameSystem({
     character: friend,
+    roster: friends,
     bounds: { width: arena.clientWidth, height: arena.clientHeight },
   });
-  saveKey = `tiny-menaces:pet:v1:${friend.id}`;
-  try {
-    const saved = localStorage.getItem(saveKey);
-    if (saved) engine.importSave(JSON.parse(saved));
-  } catch {
-    /* Use fresh state if saved data is unavailable or invalid. */
-  }
+  saveKey = petSaveKey(friend.id);
+  loadPetSave(friend.id);
   editor(engine.snapshot().personality);
   livingWorld = createLivingWorld({
     friends,
@@ -326,30 +582,20 @@ async function start() {
     notify: () => save(),
     onRegions: bridge?.setPetRegions,
     onDragging: bridge?.setPetDragging,
+    onSelectFriend: (friendId) => switchFriend(friendId),
+    focusedFriendId: friend.id,
   });
   try {
-    const stored = localStorage.getItem(`tiny-menaces:world:v1:${saveKey}`);
+    const stored = localStorage.getItem(worldSaveKey(friend.id));
     if (stored) livingWorld.world.importSave(JSON.parse(stored));
   } catch { /* The local simulation starts fresh if saved data is unavailable. */ }
   livingWorld.world.setPersonality(friend.id, engine.snapshot().personality);
+  ensureSoccerLayer(friend);
   engine.subscribe(handleEvent);
-  $("friend-name").textContent = friend.name;
-  const initials = friend.name
-    .trim()
-    .split(/\s+/)
-    .map((p) => p[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
-  $("friend-avatar").textContent = initials;
-  const targetArt = target.querySelector(".placeholder-art");
-  if (targetArt) {
-    targetArt.innerHTML = figureMarkup();
-    targetArt.classList.add("roaming", `vibe-${friend.vibe}`);
-    if (doesSixSeven(friend)) targetArt.classList.add("antic-six-seven");
-    applyLimbs(targetArt, friend);
-  }
-  target.setAttribute("aria-label", `${friend.name}, your desktop friend`);
+  updateFriendChrome(friend);
+  $("friend-select").addEventListener("change", (event) => {
+    switchFriend(event.target.value);
+  });
   $("mode-toggle").hidden = !!bridge;
   $("mode-help").textContent = bridge
     ? "⌘ / Ctrl + Shift + M to interact · ⌘ / Ctrl + Shift + Q to quit"
@@ -357,13 +603,12 @@ async function start() {
   $("mode-toggle").addEventListener("click", () =>
     setMode(!engine.snapshot().interactive),
   );
-  $("randomize").addEventListener("click", () => editor(randomPersonality()));
+  $("randomize").addEventListener("click", () => {
+    editor(randomPersonality());
+    applyPersonalityLive();
+  });
   $("save-personality").addEventListener("click", () => {
-    const values = Object.fromEntries(
-      PERSONALITY_KEYS.map((key) => [key, Number($(`trait-${key}`).value)]),
-    );
-    if (engine.setPersonality(values)) {
-      livingWorld.world.setPersonality(friend.id, values);
+    if (applyPersonalityLive()) {
       save();
       toast("Personality saved. Same friend, their own kind of chaos.");
     }
@@ -378,24 +623,32 @@ async function start() {
     });
   $("undo-prop").addEventListener("click", () => { livingWorld.world.undoProp(); save(); render(); });
   $("drop-ball").addEventListener("click", () => {
-    livingWorld.world.addProp("ball", { x: arena.clientWidth / 2, y: arena.clientHeight * 0.7 });
+    livingWorld.world.addProp("ball", {
+      x: arena.clientWidth / 2,
+      y: Math.min(120, arena.clientHeight * 0.18),
+    });
     save();
     render();
   });
   $("clean-props").addEventListener("click", () => { livingWorld.world.cleanDesktop(); save(); render(); });
-  function begin() {
-    if (engine.startRound("aim-challenge", $("difficulty").value)) {
+  function begin(gameId = lastGameId) {
+    lastGameId = gameId;
+    if (engine.startRound(gameId, $("difficulty").value)) {
+      livingWorld.world.cleanDesktop();
       livingWorld.world.setPaused(true);
       speechUntil = 0;
+      save();
       render();
       resizePending = true;
     }
   }
-  $("start").addEventListener("click", begin);
-  $("again").addEventListener("click", begin);
+  $("start").addEventListener("click", () => begin("aim-challenge"));
+  $("start-soccer").addEventListener("click", () => begin("soccer"));
+  $("again").addEventListener("click", () => begin(lastGameId));
   $("stop").addEventListener("click", () => {
     engine.abortRound();
     livingWorld.world.setPaused(false);
+    soccerDrag = null;
     render();
     resizePending = true;
   });
@@ -416,10 +669,11 @@ async function start() {
   );
   arena.addEventListener("pointerleave", () => engine.setPointer(null));
   arena.addEventListener("pointerdown", (event) => {
-    if (event.button !== 0 || event.target.closest("button, #results")) return;
+    if (event.button !== 0 || event.target.closest("button, #results, #soccer-layer")) return;
     engine.tick();
     const snapshot = engine.snapshot(),
       point = pointFor(event);
+    if (snapshot.round?.gameId === "soccer") return;
     if (snapshot.round) engine.shoot(point);
     else if (
       !livingWorld &&

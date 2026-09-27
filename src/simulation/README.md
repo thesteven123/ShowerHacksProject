@@ -1,7 +1,7 @@
 # Living desktop simulation — Kelvin (Person 3)
 
 `DesktopWorld` runs several friends in the existing Electron overlay. It is the
-companion mode around the 30-second Aim Challenge; the challenge still uses
+companion mode around Aim Challenge and Soccer; those rounds still use
 `GameSystem` in `src/game/`. The browser preview uses the same renderer for
 iteration, but `npm start` is the desktop deliverable.
 
@@ -24,10 +24,13 @@ iteration, but `npm start` is the desktop deliverable.
   are generated. Older saved decorations are discarded when loading. There is
   a 12-ball cap; no desktop file is created, moved,
   or deleted.
-- The world pauses during Aim Challenge and resumes afterward. Saves are
-  validated and stored locally with normalized positions so display resizing
-  does not break the layout. A suspended computer does not cause hours of
-  catch-up simulation.
+- Personality updates from the UI sliders apply immediately to that friend’s
+  local behavior (chaos bounce, brainrot 6-7, competitive ball chase,
+  friendliness spacing).
+- The world pauses during Aim Challenge / Soccer and resumes afterward. Saves
+  are validated and stored locally with normalized positions so display
+  resizing does not break the layout. A suspended computer does not cause
+  hours of catch-up simulation.
 
 ## Engine API and handoff
 

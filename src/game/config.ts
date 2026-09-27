@@ -25,11 +25,18 @@ export const CONFIG = {
 } as const;
 export const DIFFICULTIES: Record<
   Difficulty,
-  { scale: number; speed: number; turnMs: number; tauntMs: number }
+  {
+    scale: number;
+    speed: number;
+    turnMs: number;
+    tauntMs: number;
+    /** How close the cursor has to get before they bolt. */
+    avoidRadius: number;
+  }
 > = {
-  easy: { scale: 1.4, speed: 90, turnMs: 2200, tauntMs: 1200 },
-  normal: { scale: 1.1, speed: 150, turnMs: 1400, tauntMs: 850 },
-  hard: { scale: 0.8, speed: 220, turnMs: 850, tauntMs: 550 },
+  easy: { scale: 1.4, speed: 90, turnMs: 2200, tauntMs: 1200, avoidRadius: 160 },
+  normal: { scale: 1.1, speed: 150, turnMs: 1400, tauntMs: 850, avoidRadius: 230 },
+  hard: { scale: 0.8, speed: 220, turnMs: 850, tauntMs: 550, avoidRadius: 310 },
 };
 export const DEFAULT_SPRITE_LAYOUT: SpriteLayout = {
   frameWidth: 72,
