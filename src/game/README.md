@@ -1,10 +1,11 @@
 # Game mechanics — Kelvin (Person 3)
 
-This folder owns the reusable companion/game system and the first minigame:
-one placeholder target in a playable 30-second Aim Challenge. It handles target
-movement, hit detection, effects, score, timer, respawn, difficulty, and results.
-The companion system manages personality, Friendship, Anger, XP/Level, behavior
-requests, and per-character saved data.
+This folder owns the reusable companion/game system and the minigames: a
+30-second Aim Challenge (roster prey rotation) and Soccer (hoop scoring). It
+handles targets, hits/kicks, effects, score, timer, respawn, difficulty, and
+results. The companion system manages personality, Friendship, Anger, XP/Level,
+behavior requests, `selectFriend` for the active companion, and per-character
+saved data.
 
 ## Run and test
 
@@ -62,8 +63,10 @@ reset on reload.
   replaced without changing the game engine.
 
 Creation-time personality scores (0–10) are Chaos, Brainrot, Competitive,
-and Friendliness. Friendship and Anger are separate dynamic stats (0–100).
-Tunable thresholds and rewards are in `config.ts`.
+and Friendliness. The overlay personality sliders push live updates into both
+`GameSystem` and the living world so behavior changes immediately. Friendship
+and Anger are separate dynamic stats (0–100). Tunable thresholds and rewards
+are in `config.ts`.
 
 The existing shared `FriendCharacter` and `GameEvent` types are unchanged.
 Additional event/stat types remain in this game module until the team agrees
