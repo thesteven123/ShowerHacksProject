@@ -548,9 +548,11 @@ function render() {
     $(name).value = state.state[name];
     $(`${name}-value`).textContent = Math.round(state.state[name]);
   }
-  if (!friendsReleased) {
-    $("mode-status").textContent = "CONTINUE · FRIENDS ARE WAITING";
-  }
+  $("mode-status").textContent = !friendsReleased
+    ? "CONTINUE · FRIENDS ARE WAITING"
+    : state.interactive
+      ? "INTERACTIVE · MAKE SOME TROUBLE"
+      : "QUIET MODE · JUST HANGING OUT";
   $("mood").textContent =
     state.state.anger >= 80
       ? "Rage mode. You've been warned."
