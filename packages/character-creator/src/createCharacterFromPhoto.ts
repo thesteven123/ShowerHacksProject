@@ -7,6 +7,8 @@ import { cropFace } from "./cropFace.js";
 import { styleFace } from "./styleFace.js";
 
 export type CreateCharacterInput = {
+  /** Optional stable UUID for callers that persist generated avatars. */
+  id?: string;
   name: string;
   vibe: CharacterVibe;
   quotes?: FriendCharacter["quotes"];
@@ -29,7 +31,10 @@ export async function createCharacterFromPhoto(
   photo: Buffer,
   input: CreateCharacterInput,
 ): Promise<FriendCharacter> {
-  const id = randomUUID();
+  const id = input.id ?? randomUUID();
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)) {
+    throw new Error("Avatar id must be a UUID.");
+  }
   await mkdir(input.outputDir, { recursive: true });
 
   const cropped = await cropFace(photo);

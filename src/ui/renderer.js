@@ -351,8 +351,10 @@ async function start() {
   }
   target.setAttribute("aria-label", `${friend.name}, your desktop friend`);
   $("mode-toggle").hidden = !!bridge;
+  $("manage-avatars").hidden = !bridge;
+  $("manage-avatars").addEventListener("click", () => bridge?.openAvatarManager());
   $("mode-help").textContent = bridge
-    ? "⌘ / Ctrl + Shift + M to interact · ⌘ / Ctrl + Shift + Q to quit"
+    ? "⌘ / Ctrl + Shift + M to interact · + A to manage avatars · + Q to quit"
     : "Browser preview · “Go quiet” simulates desktop mode";
   $("mode-toggle").addEventListener("click", () =>
     setMode(!engine.snapshot().interactive),
@@ -433,6 +435,7 @@ async function start() {
     resizePending = true;
   }).observe(arena);
   if (bridge) {
+    bridge.onFriendsChange?.(() => window.location.reload());
     let changed = false;
     bridge.onModeChange((enabled) => {
       changed = true;

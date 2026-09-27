@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Tiny Menaces · Manage avatars</title>
+    <link rel="stylesheet" href="./avatar-manager.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <header class="header">
+        <div>
+          <p class="eyebrow">YOUR DESKTOP CREW</p>
+          <h1>Manage avatars</h1>
+          <p class="subhead">Add friends to the world, choose who leads, or remove an uploaded avatar.</p>
+        </div>
+        <button id="close-manager" class="quiet-button" type="button">Done</button>
+      </header>
+
+      <section class="create-card" aria-labelledby="add-heading">
+        <div class="section-top">
+          <div>
+            <p class="eyebrow">MAKE A NEW MENACE</p>
+            <h2 id="add-heading">Add a friend</h2>
+          </div>
+          <span class="count-note">Up to 24 custom avatars</span>
+        </div>
+        <form id="avatar-form">
+          <label>
+            Name
+            <input id="avatar-name" name="name" maxlength="32" autocomplete="off" placeholder="e.g. Casey" required />
+          </label>
+          <label>
+            Personality
+            <select id="avatar-vibe" name="vibe">
+              <option value="chaotic">Chaotic</option>
+              <option value="dramatic">Dramatic</option>
+              <option value="supportive">Supportive</option>
+            </select>
+          </label>
+          <button id="create-avatar" class="primary-button" type="submit">Choose photo & create avatar</button>
+        </form>
+        <p class="privacy-note">Choose one clear face photo (JPG, PNG, WebP, or AVIF; up to 25 MB). It is converted on this computer; the original photo is not kept. The avatar files stay in this app’s local data folder.</p>
+        <p id="manager-status" class="status" role="status" aria-live="polite"></p>
+      </section>
+
+      <section class="roster-section" aria-labelledby="roster-heading">
+        <div class="section-top">
+          <div>
+            <p class="eyebrow">THE LINEUP</p>
+            <h2 id="roster-heading">Avatars</h2>
+          </div>
+          <span id="avatar-count" class="count-note"></span>
+        </div>
+        <div id="avatar-list" class="avatar-list" role="list" aria-live="polite"></div>
+      </section>
+    </main>
+    <script type="module" src="./avatar-manager.js"></script>
+  </body>
+</html>

@@ -18,6 +18,12 @@ There is no normal app window. After `npm start`, look on the **monitor where th
 
 `npm start` compiles the main process and game modules, copies `src/ui/` plus Person 2's built photos into `dist/`, then launches Electron.
 
+## Manage avatars
+
+In the desktop app, press `Ctrl+Shift+A` (`⌘+Shift+A` on macOS) or switch to interactive mode and click **Manage avatars**. Add a friend with one JPG, PNG, WebP, or AVIF photo, choose a personality, then select **Use in game** to feature them. Uploaded avatars can be removed; starter avatars are protected.
+
+Photos are processed locally. The original upload is not saved; generated avatar files stay in the app's user-data folder and are not added to this repository.
+
 ## Roster and sprites
 
 Friends come from Person 2's `packages/character-creator/data/characters.json` (Kelvin, Maanya, Philip, Steven). Each has:

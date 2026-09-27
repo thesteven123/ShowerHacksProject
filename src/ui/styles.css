@@ -141,6 +141,11 @@ input:focus-visible {
   align-items: center;
   gap: 10px;
 }
+.avatar-manager-button {
+  padding: 8px 12px;
+  border-color: #d7f76e55;
+  color: var(--lime);
+}
 .pill {
   font-size: 10px;
   letter-spacing: 1px;
