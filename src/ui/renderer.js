@@ -7,9 +7,9 @@ import {
   hitboxFor,
   contains,
 } from "../game-browser/game/index.js";
-import { mockFriends } from "../game-browser/shared/mockFriends.js";
 import { applyLimbs, doesSixSeven, figureMarkup } from "./figure.js";
 import { createLivingWorld } from "./living-world.js";
+import { friendsForFrontend } from "./roster.js";
 
 const $ = (id) => document.getElementById(id);
 const bridge = window.tinyMenaces;
@@ -59,14 +59,45 @@ function paintSoccerFriend(friend) {
   applyLimbs(soccerFriendArt, friend);
   soccerFriendArt.setAttribute("aria-label", `${friend.name}, soccer`);
 }
-function friendInitials(friend) {
-  return friend.name
-    .trim()
-    .split(/\s+/)
-    .map((part) => part[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
+function paintAvatar(friend) {
+  const avatar = $("friend-avatar");
+  if (!avatar || !friend) return;
+  avatar.textContent = "";
+  avatar.title = friend.name;
+  avatar.setAttribute("aria-label", `${friend.name}'s face`);
+  if (friend.imageUrl) {
+    avatar.style.backgroundImage = `url("${friend.imageUrl}")`;
+    avatar.classList.add("has-face");
+  } else {
+    avatar.style.backgroundImage = "";
+    avatar.classList.remove("has-face");
+    avatar.textContent = friend.name.slice(0, 1).toUpperCase();
+  }
+}
+function syncCrew(friends, activeId) {
+  const crew = $("crew");
+  if (!crew) return;
+  crew.replaceChildren(
+    ...friends.map((friend) => {
+      const card = document.createElement("button");
+      card.type = "button";
+      card.className = "crew-card";
+      card.dataset.friendId = friend.id;
+      card.setAttribute("aria-label", `${friend.name}, face and body`);
+      card.setAttribute("aria-pressed", String(friend.id === activeId));
+      if (friend.id === activeId) card.classList.add("selected");
+      const stage = document.createElement("span");
+      stage.className = "crew-stage";
+      stage.innerHTML = figureMarkup();
+      applyLimbs(stage, friend);
+      const name = document.createElement("span");
+      name.className = "crew-name";
+      name.textContent = friend.name;
+      card.append(stage, name);
+      card.addEventListener("click", () => switchFriend(friend.id));
+      return card;
+    }),
+  );
 }
 function petSaveKey(friendId) {
   return `tiny-menaces:pet:v1:${friendId}`;
@@ -94,10 +125,11 @@ function populateFriendSelect(friends, activeId) {
     }),
   );
   select.value = activeId;
+  syncCrew(friends, activeId);
 }
 function updateFriendChrome(friend) {
   populateFriendSelect(rosterFriends, friend.id);
-  $("friend-avatar").textContent = friendInitials(friend);
+  paintAvatar(friend);
   paintAimTarget(friend);
   paintSoccerFriend(friend);
   livingWorld?.setFocusedFriend(friend.id);
@@ -551,7 +583,15 @@ function render() {
   renderSoccer(state);
 }
 async function start() {
-  const friends = bridge ? await bridge.listFriends() : mockFriends;
+  let backendFriends = null;
+  if (bridge?.listFriends) {
+    try {
+      backendFriends = await bridge.listFriends();
+    } catch {
+      backendFriends = null;
+    }
+  }
+  const friends = friendsForFrontend(backendFriends);
   if (!friends.length)
     throw new Error(
       "No friend available. The game needs at least one character.",
