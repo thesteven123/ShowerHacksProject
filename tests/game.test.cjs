@@ -23,6 +23,7 @@ function fixture() {
     legacy = [];
   const system = new GameSystem({
     character: mockFriends[0],
+    roster: mockFriends,
     personality,
     bounds: { width: 900, height: 650 },
     random,
@@ -207,6 +208,34 @@ test("difficulty scale, small viewport bounds, and resizing preserve valid targe
   }
 });
 
+test("the target runs away from a nearby cursor and ignores a distant one", () => {
+  const f = fixture();
+  f.system.startRound();
+  f.advance(40);
+  const before = { ...f.system.snapshot().round.target };
+  const fleeRight = before.x < 450;
+  f.system.setPointer({
+    x: before.x + (fleeRight ? -36 : 36),
+    y: before.y,
+  });
+  f.advance(480);
+  const fled = f.system.snapshot().round.target;
+  assert.equal(fled.phase, "active");
+  assert.ok(
+    fleeRight ? fled.x > before.x + 20 : fled.x < before.x - 20,
+    `expected the target to flee, ${before.x} -> ${fled.x}`,
+  );
+  const parked = { ...fled };
+  f.system.setPointer({
+    x: parked.x < 450 ? parked.x + 420 : parked.x - 420,
+    y: parked.y,
+  });
+  f.advance(200);
+  const wandered = f.system.snapshot().round.target;
+  const drifted = Math.hypot(wandered.x - parked.x, wandered.y - parked.y);
+  assert.ok(drifted < 90, `a far cursor should not yank them, drift ${drifted}`);
+});
+
 test("taunt bonus is visible in target state and anger remains bounded", () => {
   const f = fixture();
   f.system.startRound();
@@ -254,4 +283,51 @@ test("a second registered game runs through the same lifecycle and events", () =
   assert.equal(f.legacy.filter((e) => e.type === "roundEnded").length, 1);
   f.system.destroy();
   assert.equal(f.system.startRound(), false);
+});
+
+test("soccer starts with a hoop and ball and ends with soccer results", () => {
+  const f = fixture();
+  assert.equal(f.system.startRound("soccer", "normal"), true);
+  const round = f.system.snapshot().round;
+  assert.equal(round.gameId, "soccer");
+  assert.ok(round.soccer);
+  assert.ok(round.soccer.hoop);
+  assert.ok(round.soccer.ball);
+  assert.equal(round.soccer.goals, 0);
+  assert.equal(f.system.arenaPointerDown("ball", { x: round.soccer.ball.x, y: round.soccer.ball.y }), true);
+  f.system.arenaPointerMove({ x: round.soccer.ball.x + 40, y: round.soccer.ball.y - 30 });
+  f.system.arenaPointerUp({ x: round.soccer.ball.x + 80, y: round.soccer.ball.y - 60 });
+  f.advance(30000);
+  const result = f.system.snapshot().result;
+  assert.equal(result.gameId, "soccer");
+  assert.ok(Number.isFinite(result.score));
+  assert.ok(Number.isFinite(result.hits));
+  assert.ok(Number.isFinite(result.shots));
+});
+
+test("aim challenge rotates prey across the full roster", () => {
+  const f = fixture();
+  assert.equal(f.system.startRound("aim-challenge", "easy"), true);
+  const seen = new Set();
+  for (let i = 0; i < 8; i++) {
+    const round = f.system.snapshot().round;
+    assert.ok(round.preyId);
+    seen.add(round.preyId);
+    f.system.shoot(f.center());
+    f.advance(900);
+  }
+  assert.ok(seen.size >= 2, `expected multiple prey ids, got ${[...seen]}`);
+  assert.ok([...seen].every((id) => mockFriends.some((friend) => friend.id === id)));
+});
+
+test("selectFriend swaps the focused companion and blocks mid-round", () => {
+  const f = fixture();
+  assert.equal(f.system.snapshot().character.id, mockFriends[0].id);
+  assert.equal(f.system.selectFriend(mockFriends[1].id), true);
+  assert.equal(f.system.snapshot().character.id, mockFriends[1].id);
+  assert.equal(f.system.selectFriend(mockFriends[1].id), true);
+  assert.equal(f.system.selectFriend("missing-friend"), false);
+  assert.equal(f.system.startRound("aim-challenge", "easy"), true);
+  assert.equal(f.system.selectFriend(mockFriends[0].id), false);
+  assert.equal(f.system.snapshot().character.id, mockFriends[1].id);
 });

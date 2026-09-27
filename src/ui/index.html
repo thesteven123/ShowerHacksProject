@@ -25,7 +25,8 @@
         <div class="friend-heading">
           <span id="friend-avatar">A</span>
           <div>
-            <h1 id="friend-name">Your friend</h1>
+            <label class="select-label" for="friend-select">Active friend</label>
+            <select id="friend-select" aria-label="Choose active friend"></select>
             <p id="mood">Just happy to be here.</p>
           </div>
         </div>
@@ -72,6 +73,7 @@
           <button id="drop-ball" type="button">Drop a ball</button>
           <button id="undo-prop" type="button">Undo ball</button>
           <button id="clean-props" type="button">Clear balls</button>
+          <span>Drop a ball for casual kicks · start Soccer for hoop scoring</span>
         </div>
         <div class="divider"></div>
         <div class="eyebrow">FIRST CHALLENGE / 01</div>
@@ -88,6 +90,9 @@
         <button id="start" class="primary full">
           Start aim challenge <span>↗</span>
         </button>
+        <button id="start-soccer" class="secondary full">
+          Start soccer <span>⚽</span>
+        </button>
         <p id="mode-help" class="hint shortcut">
           ⌘ / Ctrl + Shift + M to interact
         </p>
@@ -95,7 +100,7 @@
         <details id="personality-editor">
           <summary>Born this way <span>4 personality traits</span></summary>
           <div class="section-title">
-            <p class="hint">Make this friend your own.</p>
+            <p class="hint">Drag a trait. They feel it right away.</p>
             <button id="randomize" class="text-button">Shuffle ↻</button>
           </div>
           <div id="personality-controls"></div>

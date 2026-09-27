@@ -15,6 +15,7 @@ import {
   validateBounds,
 } from "./geometry.js";
 import { AimChallenge } from "./games/aim-challenge.js";
+import { SoccerChallenge } from "./games/soccer-challenge.js";
 import type {
   Bounds,
   GameSystemEvent,
@@ -32,6 +33,8 @@ import type {
 
 type Options = {
   character: FriendCharacter;
+  /** When set, aim-challenge can hunt any of these friends. */
+  roster?: FriendCharacter[];
   personality?: Personality;
   bounds: Bounds;
   random?: () => number;
@@ -42,7 +45,8 @@ type Options = {
 
 /** No DOM, Electron, storage, timers, audio, or AI dependencies. */
 export class GameSystem {
-  private readonly character: FriendCharacter;
+  private character: FriendCharacter;
+  private readonly roster: FriendCharacter[];
   private personality: Personality;
   private state: PetState = {
     friendship: 35,
@@ -74,6 +78,9 @@ export class GameSystem {
 
   constructor(options: Options) {
     this.character = structuredClone(options.character);
+    this.roster = structuredClone(
+      options.roster?.length ? options.roster : [options.character],
+    );
     this.random = options.random ?? Math.random;
     this.now = options.now ?? (() => performance.now());
     this.lastTime = this.now();
@@ -94,6 +101,7 @@ export class GameSystem {
     };
     confine(this.pet, this.bounds, this.layout);
     this.registerGame("aim-challenge", () => new AimChallenge());
+    this.registerGame("soccer", () => new SoccerChallenge());
   }
 
   registerGame(id: string, factory: () => MiniGame): void {
@@ -149,6 +157,7 @@ export class GameSystem {
     this.simulationTime += elapsed;
     const oldAnger = this.state.anger;
     if (this.active) {
+      this.active.setPointer?.(this.pointer);
       // Small substeps keep motion deterministic. Long suspension expires the round
       // immediately without replaying minutes of sounds, animations, or rewards.
       if (elapsed >= this.active.snapshot().remainingMs)
@@ -257,6 +266,39 @@ export class GameSystem {
     this.changed();
     return true;
   }
+  /** Swap the focused companion. Caller should export/import pet saves around this. */
+  selectFriend(friendId: string): boolean {
+    if (this.destroyed || this.active) return false;
+    const next = this.roster.find((friend) => friend.id === friendId);
+    if (!next) return false;
+    if (next.id === this.character.id) return true;
+    this.character = structuredClone(next);
+    this.personality = randomPersonality(this.random);
+    this.state = {
+      friendship: 35,
+      anger: 5,
+      xp: 0,
+      level: 1,
+      unlocks: ["pet"],
+    };
+    this.lastResult = null;
+    this.behaviorUntil = 0;
+    this.nextBehavior = this.simulationTime + 3000;
+    this.nextPet = 0;
+    this.nextAction = 0;
+    this.pet = {
+      x: this.bounds.width / 2,
+      y: this.bounds.height * 0.65,
+      scale: fittingScale(1.25, this.bounds, this.layout),
+      phase: "active",
+      clip: "walk",
+      clipTimeMs: 0,
+      taunting: false,
+    };
+    confine(this.pet, this.bounds, this.layout);
+    this.changed();
+    return true;
+  }
   startRound(
     gameId = "aim-challenge",
     difficulty: Difficulty = "normal",
@@ -272,6 +314,7 @@ export class GameSystem {
     game.start(
       {
         character: structuredClone(this.character),
+        roster: structuredClone(this.roster),
         personality: { ...this.personality },
         state: this.state,
         bounds: { ...this.bounds },
@@ -298,6 +341,18 @@ export class GameSystem {
     const hit = this.active.shoot(point);
     if (hit) this.changed();
     return hit;
+  }
+  arenaPointerDown(kind: "friend" | "ball", point: Point): boolean {
+    if (!this.interactive || this.destroyed || !this.active?.arenaPointerDown) return false;
+    return this.active.arenaPointerDown(kind, point);
+  }
+  arenaPointerMove(point: Point): void {
+    if (!this.active?.arenaPointerMove) return;
+    this.active.arenaPointerMove(point);
+  }
+  arenaPointerUp(point: Point): void {
+    if (!this.active?.arenaPointerUp) return;
+    this.active.arenaPointerUp(point);
   }
   perform(action: PetAction): { accepted: boolean; reason?: string } {
     this.tick();

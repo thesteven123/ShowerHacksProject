@@ -1,5 +1,6 @@
 export { GameSystem } from "./system.js";
 export { AimChallenge } from "./games/aim-challenge.js";
+export { SoccerChallenge } from "./games/soccer-challenge.js";
 export {
   CONFIG,
   DIFFICULTIES,
