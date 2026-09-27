@@ -208,19 +208,29 @@ p {
   display: block;
   width: 100%;
   margin: 0;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 800;
   letter-spacing: -0.4px;
-  color: inherit;
-  background: transparent;
-  border: none;
-  border-radius: 0;
-  padding: 0;
+  color: #f4f4e9;
+  background: #1d3028;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 6px 10px;
   cursor: pointer;
+  color-scheme: dark;
 }
-.friend-heading #friend-select:focus {
-  outline: 2px solid color-mix(in srgb, var(--accent, #cab0ee) 70%, white);
+.friend-heading #friend-select option {
+  color: #f4f4e9;
+  background: #1d3028;
+}
+.friend-heading #friend-select:focus,
+.friend-heading #friend-select:focus-visible {
+  outline: 2px solid var(--lime);
   outline-offset: 3px;
+}
+.friend-heading #friend-select:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
 }
 .level-row,
 .stat > div {
