@@ -6,7 +6,7 @@
     <title>Tiny Menaces · Your friend, slightly unhinged</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
-  <body>
+  <body class="awaiting-continue">
     <main id="app">
       <header class="topbar">
         <div class="brand">
@@ -21,6 +21,16 @@
         </div>
       </header>
       <aside class="panel">
+        <div id="continue-gate" class="continue-gate">
+          <div class="eyebrow">THEY'RE OFF THE DESKTOP</div>
+          <h2>Maanya, Kelvin, Philip, and Steven are waiting.</h2>
+          <p class="hint">
+            They stay hidden until you continue. Then they wander.
+          </p>
+          <button id="continue-friends" class="primary full" type="button">
+            Continue <span>→</span>
+          </button>
+        </div>
         <div class="eyebrow">YOUR DESKTOP PLUS ONE</div>
         <div class="friend-heading">
           <span id="friend-avatar">A</span>

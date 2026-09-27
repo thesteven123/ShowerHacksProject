@@ -51,6 +51,7 @@ let lastSave = 0,
   resizePending = true,
   saveKey;
 let livingWorld;
+let friendsReleased = false;
 let pendingAction = null;
 let lastGameId = "aim-challenge";
 let rosterFriends = [];
@@ -388,10 +389,21 @@ function editor(personality) {
     $(`trait-value-${key}`).textContent = `${personality[key]} / 10`;
   }
 }
+function releaseFriends() {
+  if (friendsReleased || !livingWorld || !engine) return;
+  friendsReleased = true;
+  document.body.classList.remove("awaiting-continue");
+  const gate = $("continue-gate");
+  if (gate) gate.hidden = true;
+  const state = engine.snapshot();
+  if (!state.round && !state.result) livingWorld.world.setPaused(false);
+  render();
+}
 function setMode(enabled) {
   if (enabled && typeof unlockAudio === "function") unlockAudio();
   engine.setInteractive(enabled);
-  if (livingWorld && !enabled) livingWorld.world.setPaused(false);
+  if (livingWorld && !friendsReleased) livingWorld.world.setPaused(true);
+  else if (livingWorld && !enabled) livingWorld.world.setPaused(false);
   document.body.classList.toggle("quiet", !enabled);
   $("mode-status").textContent = enabled
     ? "INTERACTIVE · MAKE SOME TROUBLE"
@@ -520,7 +532,8 @@ function render() {
     playing = !!state.round;
   document.body.classList.toggle("playing", playing);
   document.body.classList.toggle("result-visible", !!state.result);
-  livingWorld?.visible(!playing && !state.result);
+  document.body.classList.toggle("awaiting-continue", !friendsReleased);
+  livingWorld?.visible(friendsReleased && !playing && !state.result);
   document.body.classList.toggle(
     "urgent",
     playing && state.round.remainingMs <= 5000,
@@ -534,6 +547,9 @@ function render() {
   for (const name of ["friendship", "anger"]) {
     $(name).value = state.state[name];
     $(`${name}-value`).textContent = Math.round(state.state[name]);
+  }
+  if (!friendsReleased) {
+    $("mode-status").textContent = "CONTINUE · FRIENDS ARE WAITING";
   }
   $("mood").textContent =
     state.state.anger >= 80
@@ -556,30 +572,36 @@ function render() {
     "difficulty",
     "friend-select",
   ])
-    $(id).disabled = !state.interactive || playing;
+    $(id).disabled = !friendsReleased || !state.interactive || playing;
   for (const key of PERSONALITY_KEYS)
-    $(`trait-${key}`).disabled = !state.interactive || playing;
+    $(`trait-${key}`).disabled = !friendsReleased || !state.interactive || playing;
   $("bark").disabled =
-    !state.interactive || playing || !state.state.unlocks.includes("bark");
+    !friendsReleased || !state.interactive || playing || !state.state.unlocks.includes("bark");
   $("say67").disabled =
-    !state.interactive || playing || !state.state.unlocks.includes("say67");
+    !friendsReleased || !state.interactive || playing || !state.state.unlocks.includes("say67");
   $("again").disabled = !state.interactive;
   const soccer = playing && state.round.gameId === "soccer";
-  $("arena-eyebrow").textContent = playing
-    ? soccer
-      ? "SOCCER / 30 SECONDS"
-      : "AIM CHALLENGE / 30 SECONDS"
-    : "COMPANION MODE";
-  $("arena-title").textContent = playing
-    ? soccer
-      ? "Bank it. Competitive friends want that hoop."
-      : "They see the cursor. They do not like it."
-    : "A little company. A little chaos.";
-  $("play-tip").textContent = playing
-    ? soccer
-      ? "Drag your friend or the ball. Score in the top-right hoop. Competitive = hungrier."
-      : "Click anyone. After each hit a different friend can spawn. Taunts are +5."
-    : "Pet your friend. Let them wander. See what happens.";
+  $("arena-eyebrow").textContent = !friendsReleased
+    ? "HOLD FOR CONTINUE"
+    : playing
+      ? soccer
+        ? "SOCCER / 30 SECONDS"
+        : "AIM CHALLENGE / 30 SECONDS"
+      : "COMPANION MODE";
+  $("arena-title").textContent = !friendsReleased
+    ? "They're waiting off-screen."
+    : playing
+      ? soccer
+        ? "Bank it. Competitive friends want that hoop."
+        : "They see the cursor. They do not like it."
+      : "A little company. A little chaos.";
+  $("play-tip").textContent = !friendsReleased
+    ? "Continue to let Maanya, Kelvin, Philip, and Steven onto the desktop."
+    : playing
+      ? soccer
+        ? "Drag your friend or the ball. Score in the top-right hoop. Competitive = hungrier."
+        : "Click anyone. After each hit a different friend can spawn. Taunts are +5."
+      : "Pet your friend. Let them wander. See what happens.";
   if (playing) {
     $("time").textContent = (state.round.remainingMs / 1000).toFixed(1);
     $("score").textContent = state.round.score;
@@ -593,7 +615,12 @@ function render() {
   syncAimPrey(state);
   const entity = state.round?.target || state.companion,
     layout = engine.layout;
-  target.hidden = soccer || (!playing && !!livingWorld) || !!state.result || entity.phase === "hidden";
+  target.hidden =
+    !friendsReleased ||
+    soccer ||
+    (!playing && !!livingWorld) ||
+    !!state.result ||
+    entity.phase === "hidden";
   target.dataset.phase = entity.phase;
   target.dataset.clip = entity.clip;
   target.dataset.taunt = String(entity.taunting);
@@ -614,9 +641,9 @@ function render() {
   if (livingWorld && !playing && !state.result) {
     const worldState = livingWorld.render();
     $("world-count").textContent = `${worldState.actors.length} friends · ${worldState.props.filter(prop => prop.type === "ball").length} balls`;
-    $("drop-ball").disabled = !state.interactive || worldState.props.length >= 12;
-    $("undo-prop").disabled = !state.interactive || worldState.props.length === 0;
-    $("clean-props").disabled = !state.interactive || worldState.props.length === 0;
+    $("drop-ball").disabled = !friendsReleased || !state.interactive || worldState.props.length >= 12;
+    $("undo-prop").disabled = !friendsReleased || !state.interactive || worldState.props.length === 0;
+    $("clean-props").disabled = !friendsReleased || !state.interactive || worldState.props.length === 0;
   }
   renderSoccer(state);
 }
@@ -668,6 +695,8 @@ async function start() {
     if (stored) livingWorld.world.importSave(JSON.parse(stored));
   } catch { /* The local simulation starts fresh if saved data is unavailable. */ }
   livingWorld.world.setPersonality(friend.id, engine.snapshot().personality);
+  livingWorld.world.setPaused(true);
+  livingWorld.visible(false);
   ensureSoccerLayer(friend);
   engine.subscribe(handleEvent);
   updateFriendChrome(friend);
@@ -724,16 +753,17 @@ async function start() {
   $("start").addEventListener("click", () => begin("aim-challenge"));
   $("start-soccer").addEventListener("click", () => begin("soccer"));
   $("again").addEventListener("click", () => begin(lastGameId));
+  $("continue-friends").addEventListener("click", releaseFriends);
   $("stop").addEventListener("click", () => {
     engine.abortRound();
-    livingWorld.world.setPaused(false);
+    if (friendsReleased) livingWorld.world.setPaused(false);
     soccerDrag = null;
     render();
     resizePending = true;
   });
   $("back").addEventListener("click", () => {
     engine.dismissResult();
-    livingWorld.world.setPaused(false);
+    if (friendsReleased) livingWorld.world.setPaused(false);
     render();
   });
   function pointFor(event) {
@@ -810,6 +840,7 @@ async function start() {
       livingWorld.world.setBounds({ width: arena.clientWidth, height: arena.clientHeight });
       resizePending = false;
     }
+    if (!friendsReleased) livingWorld.world.setPaused(true);
     engine.tick();
     livingWorld.world.tick(now);
     render();
