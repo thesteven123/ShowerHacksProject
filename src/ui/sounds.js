@@ -81,3 +81,9 @@ function unlockAudio() {
   const ctx = context();
   if (ctx.state === "suspended") void ctx.resume();
 }
+
+function playSound(name) {
+  if (!name) return;
+  unlockAudio();
+  playReactionSound(name);
+}

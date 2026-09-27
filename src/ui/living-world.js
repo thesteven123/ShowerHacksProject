@@ -203,6 +203,7 @@ export function createLivingWorld({ friends, bounds, personality, arena, enabled
     }
     if (event.type === "propAdded" || event.type === "propsChanged") render();
     if (event.type === "ballKicked") {
+      if (typeof playSound === "function") playSound(event.strength > 320 ? "bonk" : "pop");
       const node = props.get(event.propId);
       pulseBall(node, event.strength > 320);
       const ball = world.snapshot().props.find(prop => prop.id === event.propId);
@@ -218,6 +219,7 @@ export function createLivingWorld({ friends, bounds, personality, arena, enabled
       render();
     }
     if (event.type === "actorsBumped") {
+      if (typeof playSound === "function") playSound("oof");
       for (const id of event.actorIds) blurt(id, pickLine(BUMP_LINES), 900);
       render();
     }
@@ -233,6 +235,7 @@ export function createLivingWorld({ friends, bounds, personality, arena, enabled
       hoopNode.classList.add("hoop-score");
       setTimeout(() => hoopNode.classList.remove("hoop-score"), 420);
       spawnSparks(snap.hoop.x + snap.hoop.width / 2, snap.hoop.y + snap.hoop.height / 2, 8);
+      if (typeof playSound === "function") playSound("cheer");
       if (event.scorerId) {
         const scorer = snap.actors.find(actor => actor.id === event.scorerId);
         const lines = scorer && scorer.personality.competitive >= 7 ? SCORE_LINES_COMP : SCORE_LINES;
@@ -293,6 +296,7 @@ export function createLivingWorld({ friends, bounds, personality, arena, enabled
       entry.bubble.classList.toggle("bubble-below", actor.position.y < 180);
     }
     if (outbreak && now >= nextChantAt) {
+      if (typeof playSound === "function") playSound("giggle");
       const until = now + 1900;
       for (const actor of state.actors)
         directSpeech.set(actor.id, { text: "SIX SEVEN. 6️⃣ 7️⃣", until });

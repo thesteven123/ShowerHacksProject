@@ -13,6 +13,27 @@ import { friendsForFrontend } from "./roster.js";
 
 const $ = (id) => document.getElementById(id);
 const bridge = window.tinyMenaces;
+const VIBE_SOUNDS = {
+  chaotic: { idle: "giggle", hit: "bonk", respawn: "pop" },
+  dramatic: { idle: "dramatic", hit: "gasp", respawn: "dramatic" },
+  supportive: { idle: "cheer", hit: "oof", respawn: "cheer" },
+};
+const ACTION_SOUNDS = {
+  pet: "cheer",
+  greet: "giggle",
+  dance: "giggle",
+  bark: "bonk",
+  say67: "giggle",
+  taunt: "gasp",
+  "soccer-goal": "cheer",
+};
+window.addEventListener(
+  "pointerdown",
+  () => {
+    if (typeof unlockAudio === "function") unlockAudio();
+  },
+  { capture: true },
+);
 document.body.classList.toggle("preview", !bridge);
 const labels = {
   chaos: ["Chaos", "Calm routines → max it, they ricochet"],
@@ -270,7 +291,13 @@ function renderSoccer(state) {
   }
 }
 
+function reactionSound(friend, event, anger = 0) {
+  if (event === "hit" && anger >= 80) return "dramatic";
+  if (event === "hit" && anger >= 30) return "oof";
+  return VIBE_SOUNDS[friend?.vibe]?.[event] || (event === "hit" ? "bonk" : "pop");
+}
 async function react(character, event, anger = 0) {
+  if (typeof playSound === "function") playSound(reactionSound(character, event, anger));
   if (event === "hit" && anger >= 80) {
     say("okay bet. RAGE MODE.");
     return;
@@ -362,6 +389,7 @@ function editor(personality) {
   }
 }
 function setMode(enabled) {
+  if (enabled && typeof unlockAudio === "function") unlockAudio();
   engine.setInteractive(enabled);
   if (livingWorld && !enabled) livingWorld.world.setPaused(false);
   document.body.classList.toggle("quiet", !enabled);
@@ -383,6 +411,10 @@ function handleEvent(event) {
     const prey =
       rosterFriends.find((friend) => friend.id === event.characterId) || character;
     void react(prey, "hit", current.state.anger);
+  } else if (event.type === "respawn") {
+    const who =
+      rosterFriends.find((friend) => friend.id === event.characterId) || character;
+    void react(who, "respawn");
   } else if (event.type === "behavior") {
     const reactions = {
       pet: "okay… you're my favorite ♡",
@@ -402,15 +434,21 @@ function handleEvent(event) {
     // player-triggered actions from the single-target game system here.
     if (!livingWorld || current.round || event.behavior === pendingAction) {
       if (event.behavior === "idle") void react(character, "idle");
-      else say(reactions[event.behavior] || event.behavior);
+      else {
+        if (typeof playSound === "function") playSound(ACTION_SOUNDS[event.behavior] || "pop");
+        say(reactions[event.behavior] || event.behavior);
+      }
     }
-  } else if (event.type === "levelUp")
+  } else if (event.type === "levelUp") {
+    if (typeof playSound === "function") playSound("cheer");
     toast(
       `Level ${event.level}! ${event.unlocked.length ? `Unlocked: ${event.unlocked.join(", ")}` : "Your friendship has history."}`,
     );
+  }
   else if (event.type === "roundAborted")
     toast("Round stopped. Unfinished rounds don't award XP.");
   else if (event.type === "roundCompleted") {
+    if (typeof playSound === "function") playSound("cheer");
     resultView(event.result);
     renderedResultKey = JSON.stringify(event.result);
   }
@@ -663,6 +701,7 @@ async function start() {
     });
   $("undo-prop").addEventListener("click", () => { livingWorld.world.undoProp(); save(); render(); });
   $("drop-ball").addEventListener("click", () => {
+    if (typeof playSound === "function") playSound("pop");
     livingWorld.world.addProp("ball", {
       x: arena.clientWidth / 2,
       y: Math.min(120, arena.clientHeight * 0.18),
